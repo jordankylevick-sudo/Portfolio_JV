@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OPA Controller · Jordan Vick</title>
+<meta name="description" content="A 320-channel FPGA and custom-PCB control system for a 128-channel optical phased array, built at NRC Nanophotonics. Includes an interactive 3D model.">
+<meta property="og:title" content="128-Channel Optical Phased Array Controller · Jordan Vick">
+<meta property="og:description" content="FPGA, two custom PCBs, 16 DACs and a camera-in-the-loop genetic algorithm. Explore it in 3D.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://jordankylevick-sudo.github.io/Portfolio_JV/projects/opa-controller.html">
+<meta property="og:image" content="https://jordankylevick-sudo.github.io/Portfolio_JV/assets/og-opa.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="../">Jordan Vick<span>.</span></a>
+    <ul>
+      <li><a class="l" href="../#projects">Projects</a></li>
+      <li><a class="l" href="#model">3D model</a></li>
+      <li><a class="l" href="../#contact">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+<header class="p-head">
+  <div class="wrap">
+    <a class="back" href="../#projects">← All projects</a>
+    <p class="eyebrow">NRC Nanophotonics · Electrical Engineering Intern · May – Sep 2024</p>
+    <h1>128-Channel Optical Phased Array Controller</h1>
+    <p class="lead">A reconfigurable electronic control system that sets a precise DC voltage on every phase shifter of a silicon photonic chip, so the lab can steer and focus a laser beam with no moving parts.</p>
+    <div class="facts">
+      <div class="fact"><b>320</b><span>independent 0–10 V channels</span></div>
+      <div class="fact"><b>6 → 16</b><span>DACs driven by one FPGA</span></div>
+      <div class="fact"><b>2</b><span>custom PCBs designed and built</span></div>
+      <div class="fact"><b>+40%</b><span>power in the focused beam spot</span></div>
+    </div>
+    <div class="meta-row"><span><b>Role</b> hardware, FPGA pinout, Python UI, optimization</span><span><b>Tools</b> Xilinx Vivado, CircuitMaker, Python</span><span><b>Supervisor</b> Jianhao Zhang</span></div>
+  </div>
+</header>
+
+<section id="model">
+  <div class="wrap">
+    <p class="eyebrow">Interactive 3D model</p>
+    <h2>Take the system apart</h2>
+    <p>Rotate, zoom and explode the full assembly, follow the signal from the PC to the chip and back through the camera, and watch the genetic algorithm focus the beam. Click any part for its specs.</p>
+    <div class="viewer">
+      <button class="poster" id="poster" style="background-image:url('../assets/img/opa-3d-hero.jpg')" aria-label="Load the interactive 3D model"><span class="btn primary">▶&nbsp; Load the 3D model</span></button>
+    </div>
+    <div class="viewer-bar">
+      <span class="muted" style="font-size:14px">Built in three.js from lab photos and design sketches, so treat dimensions as indicative. The beam demo is illustrative.</span>
+      <a class="btn" href="../opa-3d/" target="_blank" rel="noopener">Open full screen ↗</a>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap split wide-left">
+    <div>
+      <p class="eyebrow">The problem</p>
+      <h2>128 phase shifters, each needing its own voltage</h2>
+      <p>An optical phased array (OPA) splits laser light into many waveguides, each with a tiny heater. A DC voltage heats the waveguide, changes its refractive index and delays the light. A gradient of delays across the array tilts the combined beam, which makes OPAs attractive for LiDAR and free-space optical communication.</p>
+      <p>The group's chips needed <strong>128 independently controlled channels</strong> at up to 10 V. Commercial drivers offered only 4–8 channels, and a custom OEM build was quoted at about <strong>$50K CAD</strong>. The goal was a multi-purpose, reconfigurable and low-cost driver the lab could build in-house.</p>
+    </div>
+    <figure>
+      <img src="../assets/img/opa-final-client.jpg" alt="Client PCB holding the OPA chip, with ribbon cables plugged into its red connectors" loading="lazy">
+      <figcaption><b>Client PCB</b> holding the OPA chip on the optical table. Seven ribbon cables carry the 128 channels in.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">System architecture</p>
+    <h2>From a Python command to a steered beam</h2>
+    <div class="diagram panel" role="img" aria-label="Signal chain: PC running a Python UI connects over USB-UART to a Spartan-7 FPGA, which drives 16 MAX11300 DACs on the master PCB over SPI through 6 PMOD ports. Seven ribbon cables carry 128 channels to the client PCB and the OPA chip. An IR camera images the beam and feeds back to the PC.">
+      <svg viewBox="0 0 1040 300" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, sans-serif">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ff4f8b"/></marker>
+        </defs>
+        <g fill="#161d21" stroke="#33414a" stroke-width="1.5">
+          <rect x="10" y="70" width="150" height="96" rx="10"/>
+          <rect x="220" y="70" width="170" height="96" rx="10"/>
+          <rect x="450" y="50" width="200" height="136" rx="10" stroke="#1f8a52"/>
+          <rect x="710" y="70" width="150" height="96" rx="10" stroke="#1f8a52"/>
+          <rect x="910" y="80" width="120" height="76" rx="10" stroke="#ff4f8b"/>
+          <rect x="560" y="226" width="170" height="60" rx="10"/>
+        </g>
+        <g fill="#e5ebe8" font-size="17" font-weight="600" text-anchor="middle">
+          <text x="85" y="108">PC</text>
+          <text x="305" y="108">Spartan-7 FPGA</text>
+          <text x="550" y="90">Master PCB</text>
+          <text x="785" y="108">Client PCB</text>
+          <text x="970" y="114">OPA chip</text>
+          <text x="645" y="252">IR camera</text>
+        </g>
+        <g fill="#8a9894" font-size="13" text-anchor="middle" font-family="IBM Plex Mono, monospace">
+          <text x="85" y="132">Python UI</text><text x="85" y="150">GA optimizer</text>
+          <text x="305" y="132">Xilinx SP701</text><text x="305" y="150">6 PMOD ports</text>
+          <text x="550" y="114">16 × MAX11300 DAC</text><text x="550" y="134">320 ch · 0–10 V</text><text x="550" y="154">12 V supply</text><text x="550" y="172">16 × 20-pin outputs</text>
+          <text x="785" y="132">7 connectors</text><text x="785" y="150">128 traces</text>
+          <text x="970" y="136">128 heaters</text>
+          <text x="645" y="272">C-RED 2 · InGaAs</text>
+        </g>
+        <g stroke="#ff4f8b" stroke-width="2" fill="none" marker-end="url(#ar)">
+          <path d="M160 118H216"/><path d="M390 118H446"/><path d="M650 118H706"/><path d="M860 118H906"/>
+          <path d="M970 156V256H734"/>
+          <path d="M560 256H85V170"/>
+        </g>
+        <g fill="#b9c4c0" font-size="12.5" font-family="IBM Plex Mono, monospace" text-anchor="middle">
+          <text x="188" y="108">USB</text><text x="188" y="140">UART</text>
+          <text x="418" y="108">SPI</text><text x="418" y="140">PMOD</text>
+          <text x="678" y="108">7 ×</text><text x="678" y="140">ribbon</text>
+          <text x="883" y="108">wire</text><text x="883" y="140">bond</text>
+          <text x="860" y="248">beam image</text>
+          <text x="320" y="248">frames scored as fitness</text>
+        </g>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">Challenge 1 · Not enough pins</p>
+      <h2>Fitting 16 DACs on 6 PMOD ports</h2>
+      <p>Each MAX11300 DAC talks SPI, which needs chip-select, data and clock lines. With the FPGA board's default PMOD pin assignment only 3 of each port's 8 signal pins were usable, enough for just <strong>6 DACs (120 channels)</strong>.</p>
+      <p>I re-mapped every PMOD pin in the FPGA design and laid out a new bus on the master PCB, so all 8 signal pins on each port carry a DAC line. The same FPGA now drives <strong>16 DACs (320 channels)</strong>, well beyond the 128 the chip needs.</p>
+      <div class="table-scroll panel" style="padding:6px 10px;margin-top:20px">
+        <table class="compare">
+          <thead><tr><th></th><th>Default PMOD</th><th>Re-mapped</th></tr></thead>
+          <tbody>
+            <tr><td>Usable signal pins per port</td><td>3 / 8</td><td class="hi">8 / 8</td></tr>
+            <tr><td>DACs driven</td><td>6</td><td class="hi">16</td></tr>
+            <tr><td>Output channels</td><td>120</td><td class="hi">320</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <figure><img src="../assets/img/opa-pin-budget.jpg" alt="Notebook page budgeting chip-select, MOSI, MISO and clock lines across two GPIO banks" loading="lazy" style="aspect-ratio:3/4;object-fit:cover"><figcaption><b>Pin budget</b> for the re-mapped bus.</figcaption></figure>
+      <figure><img src="../assets/img/opa-master-sketch.jpg" alt="Hand sketch of the master PCB: six PMODs into a 72-pin header feeding 16 DAC sockets and 20-pin outputs" loading="lazy" style="aspect-ratio:3/4;object-fit:cover"><figcaption><b>Master PCB</b> connection sketch.</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap split wide-left">
+    <figure>
+      <img src="../assets/img/opa-ui.jpg" alt="OPA Controller Python UI with a serial log, a control pad and a live IR camera image" loading="lazy">
+      <figcaption><b>OPA Controller UI</b>: serial log, control pad and live camera panel in one window.</figcaption>
+    </figure>
+    <div>
+      <p class="eyebrow">Challenge 2 · One interface</p>
+      <h2>Control, observe and optimize in one place</h2>
+      <p>Control (FPGA), observation (camera) and optimization (algorithms) lived in separate tools. I extended the lab's Python UI to combine them:</p>
+      <ul class="bullets">
+        <li>Individual or simultaneous read/write to all 320 channels over USB-UART</li>
+        <li>Live IR camera display with FPS, exposure, gain and sensor temperature control</li>
+        <li>A genetic optimization algorithm that scores each voltage set from the camera image, keeps and recombines the best, and corrects the chip's fabrication phase errors, raising power in the focused spot by over 40%</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Building it</p>
+    <h2>From sketch to optical table</h2>
+    <p>Both boards started as hand drawings, went through CAD, and the master PCB went through two layout revisions before integration in the lab.</p>
+    <div class="gallery" style="margin-top:28px">
+      <figure><img src="../assets/img/opa-sketch-top.jpg" alt="Hand-drawn top layer routing plan for the client PCB" loading="lazy"><figcaption><b>1 · Sketch</b> client PCB routing plan</figcaption></figure>
+      <figure><img src="../assets/img/opa-client-cad.jpg" alt="Client PCB two-layer layout in CircuitMaker" loading="lazy"><figcaption><b>2 · CAD</b> two-layer client board</figcaption></figure>
+      <figure><img src="../assets/img/opa-harness.jpg" alt="Original jumper-wire harness between DAC modules" loading="lazy"><figcaption><b>3 · Before</b> the jumper-wire harness it replaced</figcaption></figure>
+      <figure><img src="../assets/img/opa-rev1.jpg" alt="First revision of the bare master PCB" loading="lazy"><figcaption><b>4 · Rev 1</b> first master PCB layout</figcaption></figure>
+      <figure><img src="../assets/img/opa-rev2.jpg" alt="Final master PCB with sockets, PMOD headers and red output connectors" loading="lazy"><figcaption><b>5 · Rev 2</b> final master PCB, populated</figcaption></figure>
+      <figure><img src="../assets/img/opa-populated.jpg" alt="FPGA mounted over the master PCB with DAC modules and 12 V supply" loading="lazy"><figcaption><b>6 · Assembly</b> FPGA, DACs and 12 V supply</figcaption></figure>
+      <figure><img src="../assets/img/opa-multimeter.jpg" alt="Multimeter reading 0.422 V at a DAC output during a UI test" loading="lazy"><figcaption><b>7 · Bring-up</b> verifying DAC outputs from the UI</figcaption></figure>
+      <figure><img src="../assets/img/opa-bench.jpg" alt="Controller on the optical table with ribbon cables to the client PCB on a positioning stage" loading="lazy"><figcaption><b>8 · Integration</b> on the optical table</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">Results</p>
+      <h2>What I delivered</h2>
+      <ul class="bullets">
+        <li>Designed, assembled and tested two PCBs that replaced a hand-wired harness and improved electrical and mechanical stability</li>
+        <li>Scaled the system from 120 to 320 controllable channels by re-mapping the FPGA's PMOD pins and designing a new bus</li>
+        <li>Added IR camera control to the Python UI and built a genetic algorithm that increased power in the focused spot by over 40%</li>
+        <li>Brought the cost of a 128+ channel driver from a ~$50K OEM quote to under $2K in parts</li>
+        <li>Debugged FPGA serial communication and Python issues, and helped characterize photonic chip power loss</li>
+      </ul>
+    </div>
+    <div>
+      <p class="eyebrow">What I learned</p>
+      <h2>Takeaways</h2>
+      <ul class="bullets">
+        <li>Enough photonics to design electronics around an optical system: phase shifters, steering and fabrication error</li>
+        <li>Attention to detail: one wrong pin in a 320-channel pinout means nothing works, so I verified each layer before moving on</li>
+        <li>Working independently, and knowing when asking for help saves a day</li>
+      </ul>
+      <p class="muted" style="margin-top:22px;font-size:15px">Next step I'd take: a hybrid optimizer that uses the genetic algorithm to find a good region, then gradient-based SPGD to converge faster.</p>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="../">← Back to portfolio</a>
+    <span>© 2026 Jordan Vick</span>
+  </div>
+</footer>
+
+<script>
+  // load the 3D model only when asked, so the page stays fast
+  document.getElementById('poster').addEventListener('click', function () {
+    var f = document.createElement('iframe');
+    f.src = '../opa-3d/';
+    f.title = 'Interactive 3D model of the OPA controller';
+    f.setAttribute('allow', 'fullscreen');
+    this.replaceWith(f);
+  });
+</script>
+</body>
+</html>

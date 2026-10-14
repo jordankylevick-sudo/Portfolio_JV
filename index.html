@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Jordan Vick · Engineering Portfolio</title>
+<meta name="description" content="Engineering portfolio of Jordan Vick, Electrical Engineering at Queen's University: hardware, PCB design, FPGA and control systems.">
+<meta property="og:title" content="Jordan Vick · Engineering Portfolio">
+<meta property="og:description" content="Hardware, PCB design, FPGA and control systems projects, including an interactive 3D model of a 128-channel optical phased array controller.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://jordankylevick-sudo.github.io/Portfolio_JV/">
+<meta property="og:image" content="https://jordankylevick-sudo.github.io/Portfolio_JV/assets/og-opa.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="./">Jordan Vick<span>.</span></a>
+    <ul>
+      <li><a class="l" href="#projects">Projects</a></li>
+      <li><a class="l" href="#experience">Experience</a></li>
+      <li><a class="l" href="#contact">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <p class="eyebrow">Electrical Engineering · Queen's University</p>
+      <h1>Jordan Vick<span>Hardware, PCBs and control systems</span></h1>
+      <p class="lead">I'm an electrical engineering student at Queen's University (B.A.Sc., 2027) with 20 months of industry internships at Skyworks Solutions and the National Research Council. I like building the electronics that make hardware move, sense and respond, and I'm looking for roles in robotics, embedded systems and PCB design.</p>
+      <div class="cta-row">
+        <a class="btn primary" href="#projects">See projects</a>
+        <a class="btn" href="projects/opa-controller.html#model">▶&nbsp; Open the 3D model</a>
+      </div>
+    </div>
+    <a class="hero-fig" href="projects/opa-controller.html#model" aria-label="Open the interactive 3D model of the OPA controller">
+      <img src="assets/img/opa-3d-exploded.jpg" alt="Exploded 3D render of the optical phased array controller: FPGA board above 16 DAC modules on the master PCB, with ribbon cables to the chip" width="1400" height="1000">
+      <span class="tag"><i></i>Interactive 3D model</span>
+    </a>
+  </div>
+</header>
+
+<section id="projects">
+  <div class="wrap">
+    <p class="eyebrow">Selected projects</p>
+    <h2>Projects</h2>
+    <div class="cards">
+      <a class="card" href="projects/opa-controller.html">
+        <div class="media"><img src="assets/img/opa-final-system.jpg" alt="Assembled OPA controller on an optical table: Spartan-7 FPGA, DAC modules and power supply on the custom master PCB" loading="lazy"><span class="tag"><i></i>3D model inside</span></div>
+        <div class="body">
+          <div class="meta">NRC Nanophotonics · Summer 2024</div>
+          <h3>128-Channel Optical Phased Array Controller</h3>
+          <p>An FPGA-driven, 320-channel precision voltage system with two custom PCBs, a Python control UI and a camera-in-the-loop genetic algorithm that steers and focuses a laser beam on a silicon photonic chip.</p>
+          <div class="chips"><span class="chip">FPGA</span><span class="chip">PCB design</span><span class="chip">SPI</span><span class="chip">Python</span><span class="chip">Photonics</span></div>
+          <span class="go">Read the project →</span>
+        </div>
+      </a>
+      <a class="card" href="projects/temperature-regulation.html">
+        <div class="media"><img src="assets/img/pid-card.jpg" alt="Simulated temperature response of the PID-controlled battery enclosure settling at its setpoint" loading="lazy"><span class="tag"><i></i>Live PID simulator</span></div>
+        <div class="body">
+          <div class="meta">Queen's Relectric · Winter 2023</div>
+          <h3>PID Battery Temperature Regulation</h3>
+          <p>An Arduino PID controller that reads thermistors and drives five PWM fans to regulate the battery enclosure of an electric Jeep conversion. It cooled a test load 3× faster than passive cooling, on a $100 budget.</p>
+          <div class="chips"><span class="chip">Arduino</span><span class="chip">PID control</span><span class="chip">Thermistors</span><span class="chip">PWM</span></div>
+          <span class="go">Read the project →</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section id="experience">
+  <div class="wrap">
+    <p class="eyebrow">Experience</p>
+    <h2>Where I've worked</h2>
+    <div class="xp">
+      <div class="xp-row"><div class="when">May 2025 – Sep 2026</div><div><h3>RF-IC Design Co-op · Skyworks Solutions</h3><p>Designed and simulated multi-chip modules for Wi-Fi front-end modules in HFSS, characterized 500+ RF devices, and built Python tools to automate RF data processing. One tool finished top 5 in a company-wide AI automation competition.</p></div></div>
+      <div class="xp-row"><div class="when">May 2024 – Sep 2024</div><div><h3>Electrical Engineering Intern · NRC Nanophotonics</h3><p>Built a 320-channel control system for an optical phased array: two custom PCBs, a Xilinx FPGA, DAC modules, a Python UI and a genetic optimization algorithm. <a href="projects/opa-controller.html">See the project</a>.</p></div></div>
+      <div class="xp-row"><div class="when">2022 – present</div><div><h3>Design teams · Queen's University</h3><p>Queen's AutoDrive (perception), TKO Robotics (BattleBots PCB rework), Queen's Baja SAE (PCB design) and Queen's Relectric (battery temperature control).</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="wrap">
+    <p class="eyebrow">Contact</p>
+    <h2>Let's talk</h2>
+    <p class="lead">I graduate in 2027 and I'm looking for full-time roles in robotics, embedded hardware and PCB design, in Canada or Europe.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="mailto:jordan.vick@queensu.ca">jordan.vick@queensu.ca</a>
+      <a class="btn" href="https://www.linkedin.com/in/jordanvick/" target="_blank" rel="noopener">LinkedIn ↗</a>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 Jordan Vick</span>
+    <span>Ottawa, Ontario · English &amp; French</span>
+  </div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,967 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Interactive 3D model of a 128-channel optical phased array controller built at NRC Nanophotonics by Jordan Vick.">
+<meta property="og:title" content="OPA Control System: interactive 3D model">
+<meta property="og:description" content="Explode the assembly, follow the signal from PC to photon, and watch a genetic algorithm focus the beam. Built at NRC Nanophotonics by Jordan Vick.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://jordankylevick-sudo.github.io/OPA-Controller/">
+<meta property="og:image" content="https://jordankylevick-sudo.github.io/OPA-Controller/preview.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>NRC OPA Controller</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&family=Saira+Condensed:wght@500;600;700&display=swap">
+<style>
+/* Layout: full-bleed 3D bench (single dark "lab at night" look by choice) with a floating instrument panel on the left and an inspector card on the right. */
+:root {
+  --bg: #0d1113;
+  --panel: rgba(17, 22, 25, 0.88);
+  --panel-solid: #141a1d;
+  --ink: #e4ebe8;
+  --muted: #8e9c98;
+  --line: #27313a;
+  --beam: #ff4f8b;
+  --copper: #d6a45e;
+  --mask: #1f8a52;
+  --font-display: "Saira Condensed", "Arial Narrow", sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; overflow: hidden; }
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; outline: none; }
+#labels { position: fixed; inset: 0; pointer-events: none; }
+
+.panel {
+  position: fixed; left: 16px; top: calc(16px + env(safe-area-inset-top, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  width: 330px; display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+.panel-head { padding: 18px 18px 14px; border-bottom: 1px solid var(--line); }
+.eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--font-display); font-weight: 700; font-size: 30px; line-height: 1; margin: 6px 0 4px; letter-spacing: .01em; text-wrap: balance; }
+.byline { color: var(--muted); font-size: 12.5px; }
+.specs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: var(--line); border-bottom: 1px solid var(--line); }
+.spec { background: var(--panel-solid); padding: 10px 10px 9px; }
+.spec b { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.spec span { font-size: 11px; color: var(--muted); }
+.panel-body { overflow-y: auto; padding: 4px 18px 18px; flex: 1; min-height: 0; }
+section { padding-top: 16px; display: grid; gap: 10px; }
+h2 { font-family: var(--font-mono); font-size: 11px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.row { display: flex; gap: 6px; flex-wrap: wrap; }
+button.chip {
+  font: 500 12.5px var(--font-body); color: var(--ink); background: transparent;
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; cursor: pointer;
+}
+button.chip:hover { border-color: #3d4a52; background: rgba(255,255,255,.03); }
+button.chip[aria-pressed="true"] { border-color: var(--beam); color: #fff; background: rgba(255,79,139,.12); }
+button.chip:focus-visible, input:focus-visible, .comp:focus-visible { outline: 2px solid var(--beam); outline-offset: 2px; }
+button.primary { background: var(--beam); border-color: var(--beam); color: #1a0710; font-weight: 600; }
+button.primary:hover { background: #ff6c9e; }
+.slider { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; }
+.slider label { font-size: 13px; }
+.slider output { font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.slider input { grid-column: 1 / -1; width: 100%; accent-color: var(--beam); }
+.demo { display: grid; grid-template-columns: 132px 1fr; gap: 10px; align-items: start; }
+.cam { width: 132px; aspect-ratio: 5 / 4; border-radius: 6px; border: 1px solid var(--line); background: #000; image-rendering: pixelated; display: block; max-width: 100%; }
+.cam-cap { font-family: var(--font-mono); font-size: 10.5px; color: var(--muted); margin-top: 4px; }
+.readout { display: grid; gap: 4px; font-family: var(--font-mono); font-size: 12px; font-variant-numeric: tabular-nums; }
+.readout div { display: flex; justify-content: space-between; gap: 8px; }
+.readout span { color: var(--muted); }
+#spark { width: 100%; height: 36px; display: block; }
+.note { font-size: 12px; color: var(--muted); line-height: 1.45; margin: 0; }
+.legend { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; counter-reset: step; }
+.legend li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; font-size: 12.5px; line-height: 1.35; }
+.legend li::before { counter-increment: step; content: counter(step); font-family: var(--font-mono); font-size: 11px; color: var(--beam); border: 1px solid rgba(255,79,139,.45); border-radius: 50%; width: 18px; height: 18px; display: grid; place-items: center; }
+.legend b { font-weight: 600; }
+.comps { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.comp { display: flex; justify-content: space-between; gap: 8px; padding: 7px 8px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.comp:hover { background: rgba(255,255,255,.04); }
+.comp.on { background: rgba(255,79,139,.12); }
+.comp small { font-family: var(--font-mono); color: var(--muted); font-size: 11px; }
+
+.inspector {
+  position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); width: 340px; max-width: calc(100vw - 32px);
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px 16px;
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+}
+.inspector h3 { font-family: var(--font-display); font-size: 24px; font-weight: 600; margin: 4px 0 6px; line-height: 1.05; text-wrap: balance; }
+.inspector p { margin: 0 0 10px; line-height: 1.5; font-size: 13.5px; }
+.inspector dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0; font-size: 12.5px; }
+.inspector dt { font-family: var(--font-mono); color: var(--muted); font-size: 11.5px; padding-top: 1px; }
+.inspector dd { margin: 0; font-variant-numeric: tabular-nums; }
+.inspector .close { position: absolute; right: 10px; top: 10px; background: none; border: 0; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+.inspector .close:hover { color: var(--ink); }
+.hint { position: fixed; right: 16px; top: calc(16px + env(safe-area-inset-top, 0px)); font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; max-width: 300px; line-height: 1.5; }
+
+.tag { font-family: var(--font-mono); font-size: 11px; color: var(--ink); background: rgba(13,17,19,.82); border: 1px solid var(--line); border-left: 2px solid var(--beam); padding: 3px 7px; border-radius: 4px; white-space: nowrap; transform: translateY(-14px); }
+.loading { position: fixed; inset: 0; display: grid; place-items: center; font-family: var(--font-mono); color: var(--muted); }
+
+@media (max-width: 760px) {
+  .panel { left: 8px; right: 8px; width: auto; top: auto; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); max-height: 46vh; }
+  .panel-head { padding: 12px 14px 10px; }
+  h1 { font-size: 24px; }
+  .panel-body { padding: 0 14px 14px; }
+  .inspector { right: 8px; left: 8px; width: auto; bottom: auto; top: calc(8px + env(safe-area-inset-top, 0px)); max-height: 40vh; overflow-y: auto; }
+  .hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } }
+</style>
+</head>
+<body>
+
+<div id="stage"></div>
+<div id="labels"></div>
+<div class="loading" id="loading">Loading 3D scene…</div>
+
+<aside class="panel" aria-label="Controls">
+  <div class="panel-head">
+    <div class="eyebrow">NRC Nanophotonics · Summer 2024</div>
+    <h1>OPA Control System</h1>
+    <div class="byline">Jordan Vick · 128-channel optical phased array driver</div>
+  </div>
+  <div class="specs">
+    <div class="spec"><b>320</b><span>DAC channels</span></div>
+    <div class="spec"><b>0–10 V</b><span>per channel</span></div>
+    <div class="spec"><b>~$1.5K</b><span>vs ~$50K OEM</span></div>
+  </div>
+  <div class="panel-body">
+    <section>
+      <h2>View</h2>
+      <div class="row" id="views">
+        <button class="chip" data-view="overview">Overview</button>
+        <button class="chip" data-view="master">Master PCB</button>
+        <button class="chip" data-view="client">Client PCB &amp; chip</button>
+        <button class="chip" data-view="top">Top-down</button>
+      </div>
+      <div class="slider">
+        <label for="explode">Exploded view</label><output id="explodeOut">0%</output>
+        <input type="range" id="explode" min="0" max="100" value="0">
+      </div>
+      <div class="row">
+        <button class="chip" id="tLabels" aria-pressed="true">Labels</button>
+        <button class="chip" id="tSignal" aria-pressed="false">Signal path</button>
+        <button class="chip" id="tSpin" aria-pressed="false">Auto-rotate</button>
+      </div>
+    </section>
+
+    <section id="signalSec">
+      <h2>Signal chain</h2>
+      <ol class="legend">
+        <li><span><b>Python UI</b> sends a 3-byte command per channel over USB-UART (115200 baud)</span></li>
+        <li><span><b>Spartan-7 FPGA</b> turns commands into SPI on 6 PMOD ports, re-mapped so every pin carries a signal</span></li>
+        <li><span><b>Master PCB</b> routes the bus to 16 MAX11300 DACs (16 × 20 = 320 outputs, 0–10 V)</span></li>
+        <li><span><b>7 ribbon cables</b> carry 128 channels to the client PCB</span></li>
+        <li><span><b>OPA chip</b>: each DC voltage heats a phase shifter; the phase gradient steers the beam</span></li>
+        <li><span><b>IR camera</b> scores the beam and the genetic algorithm picks the next voltage set</span></li>
+      </ol>
+    </section>
+
+    <section>
+      <h2>Beam demo</h2>
+      <div class="slider">
+        <label for="steer">Steering angle</label><output id="steerOut">0.0°</output>
+        <input type="range" id="steer" min="-12" max="12" step="0.1" value="0">
+      </div>
+      <div class="demo">
+        <div>
+          <canvas class="cam" id="cam" width="80" height="64" aria-label="Simulated IR camera view of the beam spot"></canvas>
+          <div class="cam-cap">IR camera view</div>
+        </div>
+        <div class="readout">
+          <div><span>Generation</span><b id="gen">0</b></div>
+          <div><span>Power in spot</span><b id="fit">1.00</b></div>
+          <canvas id="spark" width="180" height="36" aria-hidden="true"></canvas>
+          <div class="row"><button class="chip primary" id="runGA">Run GA</button><button class="chip" id="resetGA">Reset</button></div>
+        </div>
+      </div>
+      <p class="note">An illustration of the optimization loop: the genetic algorithm tunes all 128 voltages until the smeared beam collapses into one bright spot, raising power in the spot by about 40%.</p>
+    </section>
+
+    <section>
+      <h2>Components</h2>
+      <ul class="comps" id="comps"></ul>
+    </section>
+
+    <section>
+      <p class="note">Approximate model built from lab photos, design sketches and the stated board sizes. Not exported from CAD, so treat dimensions as indicative.</p>
+    </section>
+  </div>
+</aside>
+
+<div class="hint" id="hint">Drag to orbit · scroll to zoom · right-drag to pan · click any part to inspect it</div>
+
+<div class="inspector" id="inspector" hidden>
+  <button class="close" id="closeInsp" aria-label="Close details">×</button>
+  <div class="eyebrow" id="iKind"></div>
+  <h3 id="iName"></h3>
+  <p id="iDesc"></p>
+  <dl id="iSpecs"></dl>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/renderers/CSS2DRenderer.js"></script>
+<script>
+function main() {
+'use strict';
+if (!window.THREE) { document.getElementById('loading').textContent = 'The 3D library could not load. Check your connection and reload.'; return; }
+const T = THREE;
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- component data (from the deck and project notes) ---------- */
+const COMPONENTS = {
+  laptop: { name: 'Control PC & Python UI', kind: 'Software', count: '',
+    desc: 'Custom Python (Tkinter) interface. Connects to the FPGA over a COM port, reads and writes any of the 320 channels individually or all at once, streams the IR camera, and runs the genetic algorithm.',
+    specs: [['Link', 'USB-UART, 115200 baud'], ['Command', '3 bytes per channel, 0.01 V steps'], ['Camera', 'Live view, FPS, exposure, gain, temperature']] },
+  usb: { name: 'USB-UART cable', kind: 'Interface', count: '',
+    desc: 'Serial link between the PC and the FPGA board. A full 128-channel update is 384 bytes, about 33 ms on the wire.',
+    specs: [['Protocol', 'UART over USB'], ['Rate', '115200 baud']] },
+  fpga: { name: 'Xilinx Spartan-7 SP701', kind: 'FPGA board', count: '',
+    desc: 'Reconfigurable logic that turns serial commands into SPI transactions for every DAC. Its PMOD pins were re-assigned so all 8 signal pins on each port are used, which is what made 16 DACs possible.',
+    specs: [['PMOD ports', '6 (8 signal + 2 GND + 2 × 3.3 V each)'], ['Usable PMOD pins', '3/8 → 8/8 after redesign'], ['DACs driven', '6 → 16']] },
+  pmod: { name: 'PMOD cables', kind: 'Interface', count: '× 6',
+    desc: 'Carry the re-mapped SPI lines from the FPGA to the master PCB. All 8 signal pins on each port are used, so 6 ports can serve 16 DACs instead of 6.',
+    specs: [['Signals', 'CS, MOSI, MISO, SCLK'], ['Connector', '12-pin Digilent PMOD']] },
+  master: { name: 'Master PCB', kind: 'Designed by Jordan', count: '',
+    desc: 'Replaced a hand-wired jumper harness. Routes the SPI lines from the FPGA to 16 DAC module sockets, distributes 12 V and 3.3 V, and breaks all outputs out to 20-pin connectors. Went through two layout revisions.',
+    specs: [['Size', '≈ 29 × 28 cm'], ['Sockets', '16 DAC modules'], ['Outputs', '16 × 20-pin connectors'], ['Supply', '12 V / 2 A']] },
+  dac: { name: 'MAX11300 DAC modules', kind: 'Analog outputs', count: '× 16',
+    desc: 'Each module has 20 configurable ports. The FPGA sends a number over SPI and the DAC holds a precise DC voltage, powered from the 12 V rail.',
+    specs: [['Ports', '20 per module'], ['Range', '0–10 V'], ['Resolution', '12-bit (~4096 steps)'], ['Total', '16 × 20 = 320 channels (was 120)']] },
+  conn: { name: '20-pin output connectors', kind: 'Breakout', count: '× 16',
+    desc: 'One shrouded 20-pin header per DAC module. Seven of them feed the OPA chip through ribbon cables; the rest stay free for other devices.',
+    specs: [['Pins', '20 per connector'], ['Used for this chip', '7']] },
+  power: { name: '12 V supply module', kind: 'Power', count: '',
+    desc: 'Adjustable buck converter with a voltage/current display in an acrylic case. Provides the 12 V the DACs need to reach their 0–10 V output range.',
+    specs: [['Output', '12 V'], ['Rating', '2 A']] },
+  ribbon: { name: 'Ribbon cables', kind: 'Interconnect', count: '× 7',
+    desc: 'Flat 20-way cables from the master PCB to the client PCB, carrying the 128 phase-shifter channels.',
+    specs: [['Cables', '7 × 20-way'], ['Channels', '128']] },
+  client: { name: 'Client PCB', kind: 'Designed by Jordan', count: '',
+    desc: 'Small two-layer board laid out in CircuitMaker. Fans 7 connectors in to the OPA chip so every phase shifter gets its own trace. Started as hand-drawn top and bottom layer sketches.',
+    specs: [['Layers', '2'], ['Connectors', '7 × 20-pin'], ['Traces', '128'], ['Size', '≈ 9 × 10 cm']] },
+  chip: { name: 'OPA chip', kind: 'Silicon photonics', count: '',
+    desc: 'An optical phased array: light is split into many waveguides, each with a tiny heater. DC voltage → heat → refractive index change → phase delay. A gradient of delays tilts the combined beam with no moving parts.',
+    specs: [['Phase shifters', '128'], ['Wavelength', '≈ 1550 nm (infrared)'], ['Drive', 'DC, 0–10 V per channel'], ['Uses', 'LiDAR, free-space comms']] },
+  fiber: { name: 'Fiber input', kind: 'Optics', count: '',
+    desc: 'Laser light enters the chip through an optical fiber, then a splitter tree spreads it across the phase shifters.',
+    specs: [['Coupling', 'Fiber to chip edge']] },
+  stagep: { name: 'Positioning stage', kind: 'Optics', count: '',
+    desc: 'Three-axis Thorlabs NanoMax stage that holds the client PCB and lets the chip be aligned to the fiber.',
+    specs: [['Axes', 'X, Y, Z micrometers']] },
+  camera: { name: 'IR camera (C-RED 2)', kind: 'Feedback', count: '',
+    desc: 'InGaAs camera that can see the 1550 nm beam. Each frame is scored (power in a small box around the target spot) and the score drives the genetic algorithm.',
+    specs: [['Sensor', 'InGaAs, 640 × 512'], ['Role', 'Fitness for the GA'], ['Result', '40%+ more power in the spot']] }
+};
+const ORDER = ['laptop', 'usb', 'fpga', 'pmod', 'master', 'dac', 'conn', 'power', 'ribbon', 'client', 'chip', 'fiber', 'stagep', 'camera'];
+
+/* ---------- renderer ---------- */
+const stage = document.getElementById('stage');
+const renderer = new T.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.outputEncoding = T.sRGBEncoding;
+renderer.toneMapping = T.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = T.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const labelRenderer = new T.CSS2DRenderer();
+labelRenderer.setSize(window.innerWidth, window.innerHeight);
+document.getElementById('labels').appendChild(labelRenderer.domElement);
+
+const scene = new T.Scene();
+scene.background = new T.Color(0x0d1113);
+scene.fog = new T.Fog(0x0d1113, 160, 320);
+
+const camera = new T.PerspectiveCamera(38, window.innerWidth / window.innerHeight, 0.5, 800);
+camera.position.set(-42, 64, 82);
+const controls = new T.OrbitControls(camera, renderer.domElement);
+controls.target.set(2, 5, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.maxPolarAngle = Math.PI * 0.495;
+controls.minDistance = 12;
+controls.maxDistance = 220;
+
+scene.add(new T.HemisphereLight(0xdfe9ff, 0x1a1410, 0.55));
+const key = new T.DirectionalLight(0xffffff, 1.15);
+key.position.set(-40, 90, 50);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+const sc = key.shadow.camera; sc.left = -75; sc.right = 75; sc.top = 60; sc.bottom = -60; sc.near = 10; sc.far = 220;
+key.shadow.bias = -0.0005;
+scene.add(key);
+const rim = new T.DirectionalLight(0x9fc6ff, 0.35);
+rim.position.set(60, 40, -70);
+scene.add(rim);
+
+/* ---------- helpers ---------- */
+let seed = 7;
+const rnd = () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; };
+function canvasTex(w, h, draw, opts) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const g = c.getContext('2d'); draw(g, w, h);
+  const t = new T.CanvasTexture(c);
+  t.encoding = T.sRGBEncoding;
+  t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  if (opts && opts.repeat) { t.wrapS = t.wrapT = T.RepeatWrapping; t.repeat.set(opts.repeat[0], opts.repeat[1]); }
+  return t;
+}
+const M = (color, o) => new T.MeshStandardMaterial(Object.assign({ color, roughness: 0.6, metalness: 0.05 }, o || {}));
+function box(w, h, d, mat, x, y, z, parent) {
+  const m = new T.Mesh(new T.BoxGeometry(w, h, d), mat);
+  m.position.set(x || 0, y || 0, z || 0);
+  m.castShadow = true; m.receiveShadow = true;
+  if (parent) parent.add(m);
+  return m;
+}
+function cyl(rt, rb, h, mat, x, y, z, parent, seg) {
+  const m = new T.Mesh(new T.CylinderGeometry(rt, rb, h, seg || 20), mat);
+  m.position.set(x || 0, y || 0, z || 0); m.castShadow = true; m.receiveShadow = true;
+  if (parent) parent.add(m);
+  return m;
+}
+function boardMats(topTex, edge) {
+  const e = M(edge || 0x16653d, { roughness: 0.5 });
+  const top = M(0xffffff, { map: topTex, roughness: 0.42, metalness: 0.08 });
+  return [e, e, top, e, e, e];
+}
+const groups = {};
+const parts = []; // { obj, base, off }
+function part(id, obj, off) {
+  obj.userData.comp = id;
+  parts.push({ obj, base: obj.position.clone(), off: new T.Vector3(off[0], off[1], off[2]) });
+  (groups[id] = groups[id] || []).push(obj);
+  scene.add(obj);
+  return obj;
+}
+function anchor(parent, x, y, z) { const a = new T.Object3D(); a.position.set(x, y, z); parent.add(a); return a; }
+const wp = (a) => a.getWorldPosition(new T.Vector3());
+const labelObjs = [];
+function label(text, parent, x, y, z) {
+  const d = document.createElement('div'); d.className = 'tag'; d.textContent = text;
+  const o = new T.CSS2DObject(d); o.position.set(x, y, z); parent.add(o); labelObjs.push(o); return o;
+}
+
+/* ---------- optical table (25 mm M6 hole grid) ---------- */
+const tableTex = canvasTex(128, 128, (g, w, h) => {
+  g.fillStyle = '#202326'; g.fillRect(0, 0, w, h);
+  for (let i = 0; i < 600; i++) { g.fillStyle = `rgba(255,255,255,${rnd() * 0.025})`; g.fillRect(rnd() * w, rnd() * h, 1, 1); }
+  g.fillStyle = '#2e3236'; g.beginPath(); g.arc(w / 2, h / 2, 17, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#090a0b'; g.beginPath(); g.arc(w / 2, h / 2, 12, 0, Math.PI * 2); g.fill();
+}, { repeat: [64, 40] });
+const table = new T.Mesh(new T.BoxGeometry(160, 3, 100), [M(0x15171a), M(0x15171a), M(0xffffff, { map: tableTex, roughness: 0.75, metalness: 0.2 }), M(0x15171a), M(0x15171a), M(0x15171a)]);
+table.position.set(4, -1.5, 0); table.receiveShadow = true; scene.add(table);
+
+/* ---------- master PCB (≈ 29 × 28 cm) ---------- */
+const MW = 29, MD = 28, MY = 1.2; // board top height
+const S = 40;
+const X = (x) => (x + MW / 2) * S, Y = (z) => (z + MD / 2) * S;
+const PMOD_Z = [-10.5, -8.2, -5.9, -3.6, -1.3, 1.0];
+const ROW_Z = Array.from({ length: 8 }, (_, i) => -11.6 + i * 3.3);
+const DAC_X = [-2.6, 5.0];
+const CONN_X = [10.7, 12.9];
+const masterTex = canvasTex(MW * S, MD * S, (g, w, h) => {
+  g.fillStyle = '#17784a'; g.fillRect(0, 0, w, h);
+  const grad = g.createRadialGradient(w * 0.4, h * 0.4, 50, w / 2, h / 2, w * 0.8);
+  grad.addColorStop(0, 'rgba(255,255,255,0.05)'); grad.addColorStop(1, 'rgba(0,0,0,0.12)');
+  g.fillStyle = grad; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#26a066'; g.lineWidth = 3; g.lineCap = 'round'; g.lineJoin = 'round';
+  // PMOD bus → vertical trunk → each socket row
+  PMOD_Z.forEach((z, k) => {
+    for (let j = 0; j < 4; j++) {
+      const trunk = -10.4 + k * 0.32 + j * 0.06;
+      g.beginPath(); g.moveTo(X(-13.2), Y(z - 0.3 + j * 0.2)); g.lineTo(X(trunk), Y(z - 0.3 + j * 0.2)); g.lineTo(X(trunk), Y(12.5)); g.stroke();
+    }
+  });
+  ROW_Z.forEach((z) => {
+    DAC_X.forEach((dx) => {
+      for (let j = 0; j < 3; j++) { g.beginPath(); g.moveTo(X(-8.4), Y(z - 0.4 + j * 0.25)); g.lineTo(X(dx - 3.7), Y(z - 0.4 + j * 0.25)); g.stroke(); }
+    });
+    // module → output connectors
+    for (let j = 0; j < 5; j++) {
+      g.beginPath(); g.moveTo(X(DAC_X[0] + 3.6), Y(z - 0.6 + j * 0.3)); g.lineTo(X(DAC_X[1] - 3.8), Y(z - 0.6 + j * 0.3)); g.stroke();
+      g.beginPath(); g.moveTo(X(DAC_X[1] + 3.6), Y(z - 0.6 + j * 0.3)); g.lineTo(X(CONN_X[0] - 0.6), Y(z - 0.6 + j * 0.3)); g.stroke();
+    }
+  });
+  // power rail
+  g.strokeStyle = '#2bb071'; g.lineWidth = 9;
+  g.beginPath(); g.moveTo(X(-12.5), Y(12.8)); g.lineTo(X(13.6), Y(12.8)); g.lineTo(X(13.6), Y(-13.2)); g.lineTo(X(-6), Y(-13.2)); g.stroke();
+  // pads
+  g.fillStyle = '#d7b46a';
+  ROW_Z.forEach((z) => CONN_X.forEach((cx) => { for (let i = 0; i < 10; i++) { g.fillRect(X(cx - 0.45) - 3, Y(z - 1.35 + i * 0.3) - 3, 6, 6); g.fillRect(X(cx + 0.45) - 3, Y(z - 1.35 + i * 0.3) - 3, 6, 6); } }));
+  // mounting holes
+  [[-13.6, -13.1], [13.6, -13.1], [-13.6, 13.1], [13.6, 13.1], [0, 0]].forEach(([x, z]) => {
+    g.fillStyle = '#d7b46a'; g.beginPath(); g.arc(X(x), Y(z), 16, 0, 7); g.fill();
+    g.fillStyle = '#0c0f0e'; g.beginPath(); g.arc(X(x), Y(z), 9, 0, 7); g.fill();
+  });
+  // silkscreen
+  g.fillStyle = '#f2f5f2'; g.textAlign = 'left';
+  g.font = '600 26px "IBM Plex Sans", sans-serif'; g.fillText('Nanophotonics', X(4.5), Y(12.0));
+  g.font = '700 40px "IBM Plex Sans", sans-serif'; g.fillText('NRC Canada', X(4.5), Y(13.3));
+  g.font = '500 22px "IBM Plex Mono", monospace'; g.fillText('by P3J  ·  OPA MASTER', X(-7.6), Y(13.3));
+  g.font = '500 17px "IBM Plex Mono", monospace';
+  PMOD_Z.forEach((z, k) => g.fillText('PMOD' + (k + 1), X(-12.4), Y(z + 0.75)));
+  ROW_Z.forEach((z, i) => { g.fillText('20pin_' + 'ABCDEFGH'[i], X(CONN_X[0] - 0.8), Y(z + 1.95)); g.fillText('20pin_' + 'IJKLMNOP'[i], X(CONN_X[1] - 0.8), Y(z + 1.95)); });
+  ROW_Z.forEach((z, i) => DAC_X.forEach((dx, c) => g.fillText('DAC' + (i + 1 + c * 8), X(dx - 3.4), Y(z + 1.55))));
+  g.fillText('12V IN', X(-13.2), Y(12.0));
+});
+const master = new T.Group(); master.position.set(0, 0, 0);
+const pcb = box(MW, 0.16, MD, boardMats(masterTex), 0, MY - 0.08, 0, master);
+[[-13.6, -13.1], [13.6, -13.1], [-13.6, 13.1], [13.6, 13.1], [0, 0]].forEach(([x, z]) => cyl(0.35, 0.35, MY - 0.16, M(0x2b2b2b, { metalness: 0.5 }), x, (MY - 0.16) / 2, z, master, 6));
+// PMOD headers on left edge (right-angle, black)
+const blackPlastic = M(0x141414, { roughness: 0.7 });
+PMOD_Z.forEach((z) => { box(0.9, 0.85, 1.6, blackPlastic, -13.7, MY + 0.42, z, master); });
+// DAC sockets (black female headers)
+ROW_Z.forEach((z) => DAC_X.forEach((dx) => { box(5.2, 0.85, 0.5, blackPlastic, dx, MY + 0.42, z - 0.55, master); }));
+const masterA = { pmod: PMOD_Z.map((z) => anchor(master, -14.15, MY + 0.42, z)), power: anchor(master, -12.6, MY + 0.2, 12.1), bus: anchor(master, -9.4, MY + 0.05, 0) };
+part('master', master, [0, 0, 0]);
+label('Master PCB', master, -2, MY + 0.3, 14.6);
+
+// 20-pin output connectors (red, shrouded)
+const conns = new T.Group();
+const redPlastic = M(0xd8382f, { roughness: 0.55 });
+const connA = [];
+ROW_Z.forEach((z) => CONN_X.forEach((cx, c) => {
+  box(0.95, 0.9, 3.1, redPlastic, cx, MY + 0.45, z, conns);
+  box(0.55, 0.12, 2.6, M(0x2a0d0b), cx, MY + 0.91, z, conns);
+  connA.push({ a: anchor(conns, cx, MY + 0.95, z), c, z });
+}));
+part('conn', conns, [0, 3, 0]);
+label('20-pin outputs ×16', conns, 11.8, MY + 1.2, -13.6);
+
+// MAX11300 DAC modules
+const dacTex = canvasTex(280, 104, (g, w, h) => {
+  g.fillStyle = '#1b7a45'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#2aa364'; g.lineWidth = 1.5;
+  for (let i = 0; i < 14; i++) { g.beginPath(); g.moveTo(140, 52); g.lineTo(200 + (i % 7) * 10, i < 7 ? 8 : 96); g.stroke(); }
+  g.fillStyle = '#d7b46a'; for (let i = 0; i < 10; i++) { g.fillRect(222 + (i % 5) * 11, 30 + Math.floor(i / 5) * 40, 6, 6); }
+  g.fillStyle = '#f0f3f0'; g.font = '600 13px "IBM Plex Mono", monospace'; g.fillText('MAX11300PMB1', 10, 20);
+  g.font = '500 10px "IBM Plex Mono", monospace'; g.fillText('PIXI 20-PORT', 10, 94);
+  g.fillStyle = '#e8e8e8'; g.beginPath(); g.arc(30, 58, 13, 0, 7); g.fill(); g.fillStyle = '#1b7a45'; g.font = '700 11px sans-serif'; g.fillText('M', 25, 62);
+});
+const dacs = new T.Group();
+const dacMats = boardMats(dacTex, 0x166a3b);
+const chipMat = M(0x111214, { roughness: 0.35, metalness: 0.2 });
+const pinMat = M(0xc9a35c, { metalness: 0.8, roughness: 0.3 });
+ROW_Z.forEach((z) => DAC_X.forEach((dx) => {
+  const g = new T.Group(); g.position.set(dx, MY + 1.0, z);
+  box(7, 0.14, 2.6, dacMats, 0, 0, 0, g);
+  box(0.9, 0.12, 0.9, chipMat, 0, 0.13, 0, g);
+  box(2.2, 0.55, 0.45, blackPlastic, 2.1, 0.35, -0.6, g);
+  box(2.2, 0.55, 0.45, blackPlastic, 2.1, 0.35, 0.6, g);
+  for (let i = 0; i < 4; i++) box(0.12, 0.25, 0.12, pinMat, -2.6 + i * 0.4, 0.15, -1.0, g);
+  dacs.add(g);
+}));
+part('dac', dacs, [0, 7, 0]);
+label('MAX11300 DAC ×16', dacs, DAC_X[1], MY + 1.6, ROW_Z[7] + 2.2);
+
+// 12 V supply module (buck converter in acrylic case)
+const power = new T.Group(); power.position.set(-9.6, MY, 9.0);
+const lcdTex = canvasTex(200, 120, (g, w, h) => {
+  g.fillStyle = '#0b3cff'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#cfe0ff'; g.font = '600 46px "IBM Plex Mono", monospace'; g.fillText('12.0', 18, 54); g.font = '500 30px "IBM Plex Mono", monospace'; g.fillText('0.82A', 30, 102);
+});
+box(6.4, 0.25, 4.6, M(0x1d3c8a), 0, 1.0, 0, power);
+const fins = M(0xbfc5cc, { metalness: 0.75, roughness: 0.35 });
+for (let i = 0; i < 9; i++) box(0.12, 1.2, 2.4, fins, -2.6 + i * 0.32, 1.75, 0.6, power);
+box(2.4, 0.12, 1.5, M(0xffffff, { map: lcdTex, emissive: 0x2a5cff, emissiveMap: lcdTex, emissiveIntensity: 0.7 }), 1.6, 1.25, -0.6, power);
+cyl(0.35, 0.35, 0.5, M(0x1e9b4d), 1.2, 1.4, 1.4, power); cyl(0.35, 0.35, 0.5, M(0x1e9b4d), 2.3, 1.4, 1.4, power);
+const acrylic = new T.Mesh(new T.BoxGeometry(7.2, 3.6, 5.4), new T.MeshPhysicalMaterial({ color: 0xdfefff, transparent: true, opacity: 0.16, roughness: 0.05, transmission: 0.0, depthWrite: false }));
+acrylic.position.set(0, 1.8, 0); power.add(acrylic);
+[[-3.4, -2.5], [3.4, -2.5], [-3.4, 2.5], [3.4, 2.5]].forEach(([x, z]) => cyl(0.15, 0.15, 3.6, M(0x222222, { metalness: 0.6 }), x, 1.8, z, power, 6));
+const powerA = { out: anchor(power, -3.0, 0.9, 2.0), inp: anchor(power, -3.6, 0.9, -1.6) };
+part('power', power, [-6, 8, 6]);
+label('12 V supply', power, 0, 4.1, 0);
+
+/* ---------- Spartan-7 SP701 board ---------- */
+const FW = 14, FD = 13, FY = MY + 3.4;
+const fpgaTex = canvasTex(FW * S, FD * S, (g, w, h) => {
+  g.fillStyle = '#123e2c'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(80,160,110,0.35)'; g.lineWidth = 2;
+  for (let i = 0; i < 70; i++) { g.beginPath(); const x = rnd() * w, y = rnd() * h; g.moveTo(x, y); g.lineTo(x + (rnd() - 0.5) * 220, y); g.lineTo(x + (rnd() - 0.5) * 220, y + (rnd() - 0.5) * 220); g.stroke(); }
+  for (let i = 0; i < 160; i++) { g.fillStyle = rnd() > 0.5 ? '#1c1c1c' : '#c9b48a'; const s = 6 + rnd() * 20; g.fillRect(rnd() * w, rnd() * h, s, s * (0.5 + rnd())); }
+  g.fillStyle = '#eef2ee'; g.font = '700 26px "IBM Plex Sans", sans-serif'; g.fillText('XILINX', w * 0.62, h * 0.47);
+  g.font = '500 18px "IBM Plex Mono", monospace'; g.fillText('SPARTAN-7  SP701', w * 0.08, h * 0.95);
+  g.fillText('PMOD', 34, 30);
+});
+const fpga = new T.Group(); fpga.position.set(-6.2, FY, -6.6);
+box(FW, 0.16, FD, boardMats(fpgaTex, 0x0f3324), 0, 0, 0, fpga);
+const s7Tex = canvasTex(160, 160, (g, w, h) => { g.fillStyle = '#16171a'; g.fillRect(0, 0, w, h); g.fillStyle = '#b9bcc2'; g.font = '700 22px "IBM Plex Sans", sans-serif'; g.fillText('SPARTAN', 22, 70); g.font = '600 15px "IBM Plex Mono", monospace'; g.fillText('XC7S100', 32, 98); g.fillText('FGGA676', 32, 120); });
+box(3.2, 0.32, 3.2, [chipMat, chipMat, M(0xffffff, { map: s7Tex, roughness: 0.4 }), chipMat, chipMat, chipMat], 0.6, 0.24, -0.4, fpga);
+for (let i = 0; i < 6; i++) box(0.9, 0.9, 1.5, blackPlastic, -FW / 2 + 0.6, 0.53, -5.1 + i * 2.05, fpga);
+const silver = M(0xb8bec6, { metalness: 0.85, roughness: 0.3 });
+box(1.8, 1.4, 2.1, silver, 4.2, 0.78, 5.2, fpga); box(1.8, 1.4, 2.1, silver, 4.2, 0.78, 2.7, fpga);
+cyl(0.38, 0.38, 0.25, M(0x2b78d6), 4.2, 1.6, 5.2, fpga); cyl(0.38, 0.38, 0.25, M(0x1fa39a), 4.2, 1.6, 2.7, fpga);
+box(1.0, 0.75, 6.0, blackPlastic, -4.2, 0.45, 2.3, fpga); // FMC
+box(1.0, 0.5, 0.7, silver, 1.0, 0.33, -FD / 2 + 0.5, fpga); // USB
+box(1.0, 0.5, 0.7, silver, 2.6, 0.33, -FD / 2 + 0.5, fpga);
+box(1.1, 0.9, 1.3, blackPlastic, 5.5, 0.53, -FD / 2 + 0.8, fpga); // power jack
+box(0.8, 0.6, 1.0, M(0xd43a3a), 6.2, 0.38, -2.5, fpga); // switch
+[[0, 0.6], [1.4, 0.6], [2.8, 0.6]].forEach(([x], i) => box(0.25, 0.12, 0.25, M(i ? 0x2fe06a : 0x2f7bff, { emissive: i ? 0x1fbf55 : 0x2f6bff, emissiveIntensity: 1.6 }), 3.0 + x * 0.4, 0.14, -3.6, fpga));
+[[-6.4, -5.9], [6.4, -5.9], [-6.4, 5.9], [6.4, 5.9]].forEach(([x, z]) => cyl(0.3, 0.3, FY - MY, M(0xc9a35c, { metalness: 0.8, roughness: 0.3 }), x, -(FY - MY) / 2, z, fpga, 6));
+const fpgaA = { pmod: Array.from({ length: 6 }, (_, i) => anchor(fpga, -FW / 2 + 0.1, 0.53, -5.1 + i * 2.05)), usb: anchor(fpga, 1.0, 0.33, -FD / 2 - 0.1), chip: anchor(fpga, 0.6, 0.5, -0.4) };
+part('fpga', fpga, [0, 13, 0]);
+label('Spartan-7 SP701 FPGA', fpga, 0, 1.2, -FD / 2);
+
+/* ---------- client PCB on positioning stage ---------- */
+const CX = 40, CZ = 1, CY = 7.25;
+const stagep = new T.Group(); stagep.position.set(CX, 0, CZ);
+const anod = M(0x2a2d31, { metalness: 0.55, roughness: 0.45 });
+box(11, 2.4, 11, anod, 0, 1.2, 0, stagep);
+box(9, 2.6, 9, anod, 0, 3.7, 0, stagep);
+box(8, 2.2, 8, M(0x33373c, { metalness: 0.55, roughness: 0.45 }), 0, 6.1, 0, stagep);
+[[6.6, 2.0, 0, 'x'], [0, 3.6, 5.6, 'z'], [-5.6, 5.4, -2.6, 'x']].forEach(([x, y, z, ax]) => {
+  const c = cyl(0.55, 0.55, 3.2, silver, x, y, z, stagep);
+  if (ax === 'x') c.rotation.z = Math.PI / 2; else c.rotation.x = Math.PI / 2;
+  const k = cyl(0.8, 0.8, 1.0, M(0x9aa1a8, { metalness: 0.7, roughness: 0.35 }), x * 1.25, y, z * 1.25, stagep);
+  if (ax === 'x') k.rotation.z = Math.PI / 2; else k.rotation.x = Math.PI / 2;
+});
+part('stagep', stagep, [0, 0, 0]);
+
+// client PCB outline (L-shaped, ≈ 9 × 10 cm), y = -z in shape space
+const shapePts = [[-5, -5], [5, -5], [5, 1.5], [2.8, 1.5], [2.8, 5.5], [-5, 5.5]];
+const clientShape = new T.Shape(shapePts.map(([x, z]) => new T.Vector2(x, -z)));
+const CLIENT_TOP = [[-3.4, -4.25], [-1.15, -4.25], [1.1, -4.25], [3.35, -4.25]];
+const CLIENT_LEFT = [[-4.25, -1.6], [-4.25, 0.75], [-4.25, 3.1]];
+const CHIP = [0.4, 1.2];
+const CS = 60;
+const clientTex = canvasTex(10 * CS, 10.5 * CS, (g, w, h) => {
+  const PX = (x) => (x + 5) * CS, PZ = (z) => (z + 5) * CS;
+  g.fillStyle = '#17784a'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#2bb071'; g.lineWidth = 1.6;
+  const fan = (from, n, horiz) => {
+    for (let i = 0; i < n; i++) {
+      const t = (i / (n - 1) - 0.5);
+      const sx = horiz ? from[0] + t * 1.7 : from[0] + 0.45;
+      const sz = horiz ? from[1] + 0.45 : from[1] + t * 1.7;
+      const ex = CHIP[0] + (horiz ? t * 1.1 : -0.75), ez = CHIP[1] + (horiz ? -0.75 : t * 1.1);
+      g.beginPath(); g.moveTo(PX(sx), PZ(sz));
+      g.bezierCurveTo(PX(sx), PZ(horiz ? sz + 1.6 : sz), PX(horiz ? ex : ex - 1.6), PZ(horiz ? ez - 1.6 : ez), PX(ex), PZ(ez));
+      g.stroke();
+    }
+  };
+  CLIENT_TOP.forEach((p) => fan(p, 18, true));
+  CLIENT_LEFT.forEach((p) => fan(p, 18, false));
+  g.fillStyle = '#d7b46a';
+  for (let i = 0; i < 32; i++) { g.fillRect(PX(CHIP[0] - 0.8 + i * 0.05), PZ(CHIP[1] - 0.82), 2, 6); g.fillRect(PX(CHIP[0] - 0.82), PZ(CHIP[1] - 0.8 + i * 0.05), 6, 2); }
+  g.fillStyle = '#f2f5f2'; g.textAlign = 'center';
+  g.font = '500 22px "IBM Plex Sans", sans-serif'; g.fillText('Nanophotonics', PX(0), PZ(-2.4));
+  g.font = '700 34px "IBM Plex Sans", sans-serif'; g.fillText('NRC', PX(0), PZ(-1.7)); g.fillText('Canada', PX(0), PZ(-1.05));
+  g.font = '600 26px "IBM Plex Mono", monospace'; g.fillText('by P3J', PX(0.6), PZ(4.6));
+  g.font = '500 17px "IBM Plex Mono", monospace'; g.fillText('1', PX(-0.9), PZ(0.2)); g.fillText('64', PX(1.7), PZ(0.2)); g.fillText('65', PX(-0.9), PZ(2.5)); g.fillText('128', PX(1.8), PZ(2.5));
+  ['J2', 'J3', 'J4', 'J5'].forEach((t, i) => g.fillText(t, PX(CLIENT_TOP[i][0]), PZ(-3.1)));
+  ['J1', 'J6', 'J7'].forEach((t, i) => g.fillText(t, PX(-3.2), PZ(CLIENT_LEFT[i][1] + 0.1)));
+  [[-4.3, 4.8], [4.3, -4.3], [2.1, 4.8], [4.3, 0.9]].forEach(([x, z]) => { g.fillStyle = '#d7b46a'; g.beginPath(); g.arc(PX(x), PZ(z), 14, 0, 7); g.fill(); g.fillStyle = '#0c0f0e'; g.beginPath(); g.arc(PX(x), PZ(z), 8, 0, 7); g.fill(); });
+});
+clientTex.repeat.set(1 / 10, 1 / 10.5); clientTex.offset.set(0.5, 5.5 / 10.5);
+const client = new T.Group(); client.position.set(CX, CY, CZ);
+const cgeo = new T.ExtrudeGeometry(clientShape, { depth: 0.16, bevelEnabled: false });
+cgeo.rotateX(-Math.PI / 2);
+const cmesh = new T.Mesh(cgeo, [M(0xffffff, { map: clientTex, roughness: 0.42, metalness: 0.08 }), M(0x16653d)]);
+cmesh.castShadow = true; cmesh.receiveShadow = true; client.add(cmesh);
+const clientA = [];
+CLIENT_TOP.forEach(([x, z]) => { box(3.1, 0.9, 0.95, redPlastic, x, 0.6, z, client); clientA.push({ a: anchor(client, x, 1.05, z), dir: 'x' }); });
+CLIENT_LEFT.forEach(([x, z]) => { box(0.95, 0.9, 3.1, redPlastic, x, 0.6, z, client); clientA.push({ a: anchor(client, x, 1.05, z), dir: 'z' }); });
+box(2.2, 0.5, 2.2, M(0x1a1a1c, { roughness: 0.4 }), CHIP[0], 0.4, CHIP[1], client); // socket frame
+box(1.0, 0.12, 0.3, pinMat, CHIP[0] + 1.5, 0.25, CHIP[1] - 0.1, client); // small header
+part('client', client, [0, 4, 0]);
+label('Client PCB', client, -1, 1.2, 5.8);
+
+// OPA chip (die with grating emitters)
+const dieTex = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#4a4d5c'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#9aa0c0'; g.lineWidth = 1.2;
+  for (let i = 0; i < 16; i++) { g.beginPath(); g.moveTo(20, 128); g.bezierCurveTo(70, 128, 80, 40 + i * 11.5, 120, 40 + i * 11.5); g.lineTo(200, 40 + i * 11.5); g.stroke(); }
+  g.fillStyle = '#c9cfe8'; for (let i = 0; i < 16; i++) for (let j = 0; j < 6; j++) g.fillRect(205 + j * 7, 38 + i * 11.5, 4, 4);
+  g.fillStyle = '#d7b46a'; for (let i = 0; i < 32; i++) { g.fillRect(4 + i * 7.8, 4, 4, 8); g.fillRect(4 + i * 7.8, h - 12, 4, 8); }
+});
+const chip = new T.Group(); chip.position.set(CX + CHIP[0], CY + 0.72, CZ + CHIP[1]);
+box(1.25, 0.08, 1.25, [chipMat, chipMat, M(0xffffff, { map: dieTex, roughness: 0.25, metalness: 0.4 }), chipMat, chipMat, chipMat], 0, 0, 0, chip);
+const chipA = anchor(chip, 0.15, 0.05, 0);
+part('chip', chip, [0, 9, 0]);
+label('OPA chip · 128 phase shifters', chip, 0, 0.4, 0);
+
+// fiber input
+const fiberGroup = new T.Group(); fiberGroup.userData.comp = 'fiber'; scene.add(fiberGroup); (groups.fiber = []).push(fiberGroup);
+
+// IR camera on a post, looking down at the chip
+const CAMY = 30;
+const cam = new T.Group(); cam.position.set(CX + CHIP[0], CAMY, CZ + CHIP[1]);
+const camTex = canvasTex(256, 128, (g, w, h) => { g.fillStyle = '#18191b'; g.fillRect(0, 0, w, h); g.fillStyle = '#cfd2d6'; g.font = '600 30px "IBM Plex Sans", sans-serif'; g.fillText('FIRST LIGHT', 24, 60); g.font = '500 20px "IBM Plex Mono", monospace'; g.fillText('C-RED 2', 24, 94); });
+const camBody = M(0x1b1c1f, { roughness: 0.55, metalness: 0.3 });
+box(7.2, 12, 7.2, [camBody, camBody, camBody, camBody, M(0xffffff, { map: camTex, roughness: 0.5 }), camBody], 0, 6.4, 0, cam);
+for (let i = 0; i < 6; i++) box(7.4, 0.25, 7.4, M(0x111214), 0, 9.2 + i * 0.5, 0, cam);
+cyl(2.1, 2.1, 0.8, M(0x8a2a5a, { metalness: 0.5, roughness: 0.35 }), 0, 0.2, 0, cam);
+cyl(1.7, 1.9, 1.2, camBody, 0, -0.6, 0, cam);
+const lens = cyl(1.3, 1.3, 0.1, M(0x0a0d1a, { roughness: 0.05, metalness: 0.9 }), 0, -1.25, 0, cam);
+box(1.5, 0.4, 9.5, anod, 0, 8, -7.8, cam); // arm
+cyl(0.7, 0.7, CAMY + 8, silver, 0, -CAMY + (CAMY + 8) / 2 - 0.0, -12.5, cam); // post
+cyl(2.2, 2.2, 0.8, anod, 0, -CAMY + 0.4, -12.5, cam);
+const camA = { lens: anchor(cam, 0, -1.3, 0), cable: anchor(cam, 0, 12.4, 0) };
+part('camera', cam, [0, 10, 0]);
+label('IR camera (C-RED 2)', cam, 0, 13.4, 0);
+
+/* ---------- laptop ---------- */
+const uiTex = canvasTex(640, 400, (g, w, h) => {
+  g.fillStyle = '#0d5bd7'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#f2f3f5'; g.fillRect(28, 18, w - 56, h - 54);
+  g.fillStyle = '#20242a'; g.font = '500 22px "IBM Plex Sans", sans-serif'; g.fillText('OPA Controller  -  Nanophotonics NRC', 130, 50);
+  g.fillStyle = '#c9ccd2'; [[44, 70], [120, 70], [200, 70]].forEach(([x, y]) => g.fillRect(x, y, 66, 20));
+  g.fillStyle = '#9fc4ff'; g.fillRect(44, 98, 140, 18); g.fillStyle = '#1a4ec0'; g.font = '500 12px sans-serif'; g.fillText('COM5 connected', 62, 112);
+  g.fillStyle = '#ffffff'; g.fillRect(44, 126, 200, 210); g.fillStyle = '#4b515a'; g.font = '11px "IBM Plex Mono", monospace';
+  ['write Reg addr 0x60 data 0x69', 'Voltage: 0.25 V', 'write Reg addr 0x60 data 0x7e', 'Voltage: 0.30 V', 'write Reg addr 0x60 data 0x93', 'Voltage: 0.35 V', 'Change your voltage by:', ' 7: +0.05V   5: -0.05V'].forEach((t, i) => g.fillText(t, 50, 144 + i * 22));
+  g.fillStyle = '#f6a33a'; g.fillRect(262, 70, 120, 20);
+  g.fillStyle = '#c9ccd2'; for (let i = 0; i < 28; i++) g.fillRect(262 + (i % 7) * 18, 130 + Math.floor(i / 7) * 24, 15, 18);
+  g.fillStyle = '#9fd0ea'; g.fillRect(262, 240, 130, 18);
+  g.fillStyle = '#22262c'; g.fillRect(410, 100, 186, 190);
+  const gr = g.createRadialGradient(503, 195, 2, 503, 195, 60); gr.addColorStop(0, '#ffd2e3'); gr.addColorStop(0.3, '#ff4f8b'); gr.addColorStop(1, 'rgba(34,38,44,0)');
+  g.fillStyle = gr; g.fillRect(410, 100, 186, 190);
+  g.fillStyle = '#7f8794'; g.font = '11px "IBM Plex Mono", monospace'; g.fillText('model: C-RED 2', 418, 306);
+});
+const laptop = new T.Group(); laptop.position.set(-38, 0, 14); laptop.rotation.y = 0.35;
+const alu = M(0xb9bdc3, { metalness: 0.7, roughness: 0.35 });
+box(32, 1.4, 22, alu, 0, 0.7, 0, laptop);
+box(28, 0.08, 10, M(0x2a2c30), 0, 1.44, -3.5, laptop);
+box(10, 0.06, 6.5, M(0x9ea3aa, { metalness: 0.6, roughness: 0.4 }), 0, 1.44, 6.5, laptop);
+const lid = new T.Group(); lid.position.set(0, 1.4, -11); lid.rotation.x = -0.32; laptop.add(lid);
+box(32, 21, 0.7, alu, 0, 10.5, -0.35, lid);
+const scr = new T.Mesh(new T.PlaneGeometry(29.5, 18.4), new T.MeshBasicMaterial({ map: uiTex, toneMapped: false }));
+scr.position.set(0, 10.8, 0.02); lid.add(scr);
+const laptopA = { usb: anchor(laptop, 16, 0.7, -4), cam: anchor(laptop, 16, 0.7, -8), screen: anchor(lid, 0, 10.8, 0.5) };
+part('laptop', laptop, [-6, 0, 4]);
+label('Python control UI', lid, 0, 22.5, 0);
+
+/* ---------- cables (rebuilt when exploding) ---------- */
+const cableMat = M(0x151618, { roughness: 0.6 });
+const usbMat = M(0x2a2c30, { roughness: 0.55 });
+const redWire = M(0xc8322a), blackWire = M(0x101010);
+const fiberMat = M(0xf0c419, { roughness: 0.4, emissive: 0x3a2b00, emissiveIntensity: 0.4 });
+const ribbonTex = canvasTex(64, 8, (g, w, h) => { g.fillStyle = '#b7b9b6'; g.fillRect(0, 0, w, h); for (let i = 0; i < 20; i++) { g.fillStyle = i === 0 ? '#9b3a3a' : (i % 2 ? '#a9aba8' : '#c4c6c3'); g.fillRect(i * 3.2, 0, 2.6, h); } });
+const ribbonMat = new T.MeshStandardMaterial({ map: ribbonTex, roughness: 0.65, side: T.DoubleSide });
+
+const cableGroups = { pmod: new T.Group(), usb: new T.Group(), ribbon: new T.Group(), power: new T.Group(), fiber: fiberGroup, camcable: new T.Group() };
+['pmod', 'usb', 'ribbon', 'power', 'camcable'].forEach((k) => { scene.add(cableGroups[k]); });
+cableGroups.pmod.userData.comp = 'pmod'; (groups.pmod = []).push(cableGroups.pmod);
+cableGroups.usb.userData.comp = 'usb'; (groups.usb = []).push(cableGroups.usb);
+cableGroups.ribbon.userData.comp = 'ribbon'; (groups.ribbon = []).push(cableGroups.ribbon);
+
+function clearGroup(g) { while (g.children.length) { const c = g.children.pop(); if (c.geometry) c.geometry.dispose(); } }
+function tube(points, r, mat, parent) {
+  const curve = points.length === 4 ? new T.CubicBezierCurve3(points[0], points[1], points[2], points[3]) : new T.CatmullRomCurve3(points);
+  const m = new T.Mesh(new T.TubeGeometry(curve, 48, r, 8, false), mat);
+  m.castShadow = true; parent.add(m); return curve;
+}
+function ribbon(p0, p3, w0, w1, lift, parent) {
+  const p1 = p0.clone().add(new T.Vector3(0, lift, 0));
+  const p2 = p3.clone().add(new T.Vector3(0, lift * 0.8, 0));
+  const curve = new T.CubicBezierCurve3(p0, p1, p2, p3);
+  const N = 56, width = 2.5, pos = [], uv = [], idx = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, p = curve.getPoint(t), tan = curve.getTangent(t);
+    const wv = w0.clone().lerp(w1, t).normalize();
+    wv.sub(tan.clone().multiplyScalar(wv.dot(tan))).normalize();
+    const a = p.clone().addScaledVector(wv, -width / 2), b = p.clone().addScaledVector(wv, width / 2);
+    pos.push(a.x, a.y, a.z, b.x, b.y, b.z); uv.push(0, t * 8, 1, t * 8);
+    if (i < N) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+  }
+  const geo = new T.BufferGeometry();
+  geo.setAttribute('position', new T.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new T.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx); geo.computeVertexNormals();
+  const m = new T.Mesh(geo, ribbonMat); m.castShadow = true; parent.add(m);
+  return curve;
+}
+const curves = {};
+function buildCables() {
+  Object.values(cableGroups).forEach(clearGroup);
+  scene.updateMatrixWorld(true);
+  // PMOD cables: FPGA left edge → loop out → master left-edge headers
+  curves.pmod = [];
+  for (let i = 0; i < 6; i++) {
+    const a = wp(fpgaA.pmod[i]), b = wp(masterA.pmod[i]);
+    curves.pmod.push(tube([a, a.clone().add(new T.Vector3(-4.5, 0, 0)), b.clone().add(new T.Vector3(-4.5, 0.4, 0)), b], 0.32, cableMat, cableGroups.pmod));
+  }
+  // USB: laptop → FPGA
+  const ua = wp(laptopA.usb), ub = wp(fpgaA.usb);
+  curves.usb = tube([ua, ua.clone().add(new T.Vector3(10, 0.3, -4)), ub.clone().add(new T.Vector3(-6, 0, -8)), ub], 0.28, usbMat, cableGroups.usb);
+  // camera → laptop
+  const ca = wp(camA.cable), cb = wp(laptopA.cam);
+  curves.cam = tube([ca, ca.clone().add(new T.Vector3(0, 6, -10)), cb.clone().add(new T.Vector3(20, 0.3, -28)), cb], 0.3, usbMat, cableGroups.camcable);
+  // power: supply → master 12 V input, plus wall input
+  const pa = wp(powerA.out), pb = wp(masterA.power);
+  tube([pa, pa.clone().add(new T.Vector3(-1.5, 0.6, 0.6)), pb.clone().add(new T.Vector3(0, 1.2, 0.4)), pb], 0.13, redWire, cableGroups.power);
+  tube([pa.clone().add(new T.Vector3(0.4, 0, 0)), pa.clone().add(new T.Vector3(-1.2, 0.9, 1.1)), pb.clone().add(new T.Vector3(0.6, 1.5, 0.8)), pb.clone().add(new T.Vector3(0.5, 0, 0))], 0.13, blackWire, cableGroups.power);
+  const pi = wp(powerA.inp);
+  tube([pi, pi.clone().add(new T.Vector3(-6, 0, 0)), new T.Vector3(-26, 0.4, 2), new T.Vector3(-34, 0.4, -8)], 0.3, blackWire, cableGroups.power);
+  // ribbons: 7 right-column connectors → 7 client connectors
+  curves.ribbon = [];
+  const srcs = connA.filter((c) => c.c === 1).slice(0, 7);
+  const order = [0, 1, 2, 3, 4, 5, 6]; // rear rows feed the top connectors, front rows the left ones
+  srcs.forEach((s, i) => {
+    const dst = clientA[order[i]];
+    const p0 = wp(s.a), p3 = wp(dst.a);
+    const w0 = new T.Vector3(0, 0, 1), w1 = dst.dir === 'x' ? new T.Vector3(1, 0, 0) : new T.Vector3(0, 0, 1);
+    curves.ribbon.push(ribbon(p0, p3, w0, w1, 9 + i * 0.9, cableGroups.ribbon));
+  });
+  // fiber into chip edge
+  const fa = wp(chipA).add(new T.Vector3(-0.8, 0.05, 0));
+  tube([new T.Vector3(CX - 16, 0.3, CZ + 22), new T.Vector3(CX - 14, 6, CZ + 10), fa.clone().add(new T.Vector3(-6, 1.5, 3)), fa], 0.09, fiberMat, fiberGroup);
+  const ferrule = cyl(0.25, 0.25, 2.2, silver, 0, 0, 0, fiberGroup); ferrule.position.copy(fa).add(new T.Vector3(-1.1, 0, 0)); ferrule.rotation.z = Math.PI / 2;
+  buildSignal();
+}
+
+/* ---------- beam ---------- */
+const beamGroup = new T.Group(); scene.add(beamGroup);
+const beamMat = new T.MeshBasicMaterial({ color: 0xff4f8b, transparent: true, opacity: 0.32, blending: T.AdditiveBlending, depthWrite: false, side: T.DoubleSide, toneMapped: false });
+const lobeMat = beamMat.clone(); lobeMat.opacity = 0.12;
+const beam = new T.Mesh(new T.CylinderGeometry(1, 0.08, 1, 32, 1, true), beamMat);
+const core = new T.Mesh(new T.CylinderGeometry(0.35, 0.05, 1, 16, 1, true), new T.MeshBasicMaterial({ color: 0xffc4d8, transparent: true, opacity: 0.55, blending: T.AdditiveBlending, depthWrite: false, toneMapped: false }));
+const lobes = [new T.Mesh(new T.CylinderGeometry(1, 0.08, 1, 24, 1, true), lobeMat), new T.Mesh(new T.CylinderGeometry(1, 0.08, 1, 24, 1, true), lobeMat)];
+const lobePivots = lobes.map((m) => { const p = new T.Group(); p.add(m); return p; });
+beamGroup.add(beam, core, lobePivots[0], lobePivots[1]);
+const glow = new T.Sprite(new T.SpriteMaterial({ map: canvasTex(64, 64, (g) => { const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,220,235,1)'); r.addColorStop(0.3, 'rgba(255,79,139,0.7)'); r.addColorStop(1, 'rgba(255,79,139,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); }), blending: T.AdditiveBlending, depthWrite: false, transparent: true }));
+glow.scale.set(2.4, 2.4, 1); scene.add(glow);
+const state = { explode: 0, steer: 0, focus: 0.3, signal: false, labels: true, spin: false, ga: null, gen: 0, fit: 1.0, history: [1.0] };
+function updateBeam() {
+  const o = wp(chipA), top = wp(camA.lens);
+  const L = top.y - o.y;
+  const ang = T.MathUtils.degToRad(state.steer);
+  const spread = T.MathUtils.lerp(4.2, 0.9, state.focus);
+  beamGroup.position.copy(o);
+  beamGroup.rotation.set(0, 0, -ang);
+  [beam, core].forEach((m, i) => { m.scale.set(i ? Math.max(0.6, spread * 0.4) : spread, L, i ? Math.max(0.6, spread * 0.4) : spread); m.position.set(0, L / 2, 0); });
+  beamMat.opacity = 0.18 + 0.22 * state.focus;
+  core.material.opacity = 0.15 + 0.5 * state.focus;
+  lobes.forEach((m, i) => { const s = i ? 1 : -1; m.scale.set(spread * 0.7, L, spread * 0.7); m.position.set(0, L / 2, 0); lobePivots[i].rotation.set(0, 0, s * T.MathUtils.lerp(0.22, 0.05, state.focus)); lobePivots[i].visible = state.focus < 0.95; });
+  lobeMat.opacity = 0.14 * (1 - state.focus);
+  glow.position.copy(o).add(new T.Vector3(0, 0.15, 0));
+  drawCam();
+}
+
+/* ---------- simulated IR camera view ---------- */
+const camCanvas = document.getElementById('cam'), cg = camCanvas.getContext('2d');
+const camImg = cg.createImageData(80, 64);
+const noise = new Float32Array(80 * 64).map(() => Math.random());
+function drawCam() {
+  const cx = 40 + state.steer * 2.6, cy = 32;
+  const sig = T.MathUtils.lerp(9, 2.2, state.focus);
+  const lobeA = 0.55 * (1 - state.focus), lobeOff = T.MathUtils.lerp(12, 7, state.focus);
+  const peak = T.MathUtils.lerp(0.45, 1.0, state.focus);
+  for (let y = 0; y < 64; y++) for (let x = 0; x < 80; x++) {
+    const d2 = (x - cx) ** 2 + (y - cy) ** 2;
+    let v = peak * Math.exp(-d2 / (2 * sig * sig));
+    v += lobeA * Math.exp(-((x - cx - lobeOff) ** 2 + (y - cy + 3) ** 2) / (2 * 3.2 * 3.2));
+    v += lobeA * 0.8 * Math.exp(-((x - cx + lobeOff) ** 2 + (y - cy - 2) ** 2) / (2 * 3.6 * 3.6));
+    v += noise[y * 80 + x] * 0.07;
+    v = Math.min(1, v);
+    const i = (y * 80 + x) * 4;
+    camImg.data[i] = Math.min(255, 30 + v * 320); camImg.data[i + 1] = Math.max(0, v * 220 - 70); camImg.data[i + 2] = Math.min(255, 40 + v * 170); camImg.data[i + 3] = 255;
+  }
+  cg.putImageData(camImg, 0, 0);
+  cg.strokeStyle = 'rgba(255,255,255,0.55)'; cg.lineWidth = 1; cg.strokeRect(cx - 4.5, cy - 4.5, 9, 9);
+}
+
+/* ---------- signal path ---------- */
+const sigGroup = new T.Group(); scene.add(sigGroup);
+const pulseTex = canvasTex(64, 64, (g) => { const r = g.createRadialGradient(32, 32, 0, 32, 32, 32); r.addColorStop(0, 'rgba(255,255,255,1)'); r.addColorStop(0.25, 'rgba(255,120,170,0.9)'); r.addColorStop(1, 'rgba(255,79,139,0)'); g.fillStyle = r; g.fillRect(0, 0, 64, 64); });
+let sigCurve = null; const pulses = [];
+for (let i = 0; i < 26; i++) { const s = new T.Sprite(new T.SpriteMaterial({ map: pulseTex, blending: T.AdditiveBlending, depthWrite: false, depthTest: false, transparent: true })); s.scale.set(1.6, 1.6, 1); s.visible = false; sigGroup.add(s); pulses.push(s); }
+let sigLine = null;
+function buildSignal() {
+  if (sigLine) { sigGroup.remove(sigLine); sigLine.geometry.dispose(); }
+  const pts = [];
+  const add = (v) => pts.push(v.clone());
+  add(wp(laptopA.screen));
+  curves.usb.getPoints(10).forEach(add);
+  add(wp(fpgaA.chip).add(new T.Vector3(0, 0.6, 0)));
+  curves.pmod[3].getPoints(10).forEach(add);
+  add(wp(masterA.bus).add(new T.Vector3(0, 0.3, 0)));
+  const dacRow = wp(masterA.bus); add(new T.Vector3(DAC_X[1], MY + 1.4 + state.explode * 7, ROW_Z[3]));
+  curves.ribbon[0].getPoints(16).forEach(add);
+  add(wp(chipA).add(new T.Vector3(0, 0.3, 0)));
+  add(wp(camA.lens));
+  curves.cam.getPoints(16).forEach(add);
+  const clean = pts.filter((p, i) => i === 0 || p.distanceTo(pts[i - 1]) > 0.05);
+  sigCurve = new T.CatmullRomCurve3(clean, false, 'centripetal');
+  sigLine = new T.Mesh(new T.TubeGeometry(sigCurve, 400, 0.08, 6, false), new T.MeshBasicMaterial({ color: 0xff4f8b, transparent: true, opacity: 0.35, depthTest: false, toneMapped: false }));
+  sigLine.renderOrder = 5; sigGroup.add(sigLine);
+  sigGroup.visible = state.signal;
+}
+
+/* ---------- explode ---------- */
+function applyExplode() {
+  const e = state.explode;
+  const k = e * e * (3 - 2 * e);
+  parts.forEach((p) => p.obj.position.copy(p.base).addScaledVector(p.off, k));
+  buildCables(); updateBeam(); if (selected) frameBox();
+}
+
+/* ---------- selection ---------- */
+const raycaster = new T.Raycaster(), pointer = new T.Vector2();
+const selBox = new T.Box3Helper(new T.Box3(), 0xff4f8b); selBox.visible = false; scene.add(selBox);
+let selected = null;
+function compOf(o) { while (o) { if (o.userData && o.userData.comp) return o.userData.comp; o = o.parent; } return null; }
+function frameBox() {
+  const b = new T.Box3(); (groups[selected] || []).forEach((g) => b.expandByObject(g));
+  b.expandByScalar(0.3); selBox.box.copy(b); selBox.visible = true; return b;
+}
+const insp = document.getElementById('inspector');
+function select(id, fly) {
+  selected = id;
+  document.querySelectorAll('.comp').forEach((li) => li.classList.toggle('on', li.dataset.id === id));
+  if (!id) { selBox.visible = false; insp.hidden = true; return; }
+  const c = COMPONENTS[id];
+  document.getElementById('iKind').textContent = c.kind + (c.count ? '  ' + c.count : '');
+  document.getElementById('iName').textContent = c.name;
+  document.getElementById('iDesc').textContent = c.desc;
+  const dl = document.getElementById('iSpecs'); dl.innerHTML = '';
+  c.specs.forEach(([k, v]) => { const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = v; dl.append(dt, dd); });
+  insp.hidden = false;
+  const b = frameBox();
+  if (fly) {
+    const center = b.getCenter(new T.Vector3()), size = b.getSize(new T.Vector3()).length();
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    flyTo(center.clone().addScaledVector(dir, Math.max(18, size * 1.5)), center);
+  }
+}
+const downAt = new T.Vector2();
+renderer.domElement.addEventListener('pointerdown', (e) => { downAt.set(e.clientX, e.clientY); stopSpin(); });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  if (downAt.distanceTo(new T.Vector2(e.clientX, e.clientY)) > 5) return;
+  pointer.set((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  const pickables = [];
+  Object.values(groups).forEach((arr) => arr.forEach((g) => g.traverse((o) => { if (o.isMesh && o.material !== beamMat) pickables.push(o); })));
+  const hit = raycaster.intersectObjects(pickables, false)[0];
+  select(hit ? compOf(hit.object) : null, false);
+});
+document.getElementById('closeInsp').addEventListener('click', () => select(null));
+
+/* ---------- camera moves ---------- */
+let fly = null;
+function flyTo(pos, target) {
+  if (reduceMotion) { camera.position.copy(pos); controls.target.copy(target); return; }
+  fly = { p0: camera.position.clone(), t0: controls.target.clone(), p1: pos, t1: target, s: performance.now(), d: 900 };
+}
+const VIEWS = {
+  overview: () => [new T.Vector3(-42, 64, 82), new T.Vector3(2, 5, 0)],
+  master: () => [new T.Vector3(-12, 38, 34), new T.Vector3(0, 3, 0)],
+  client: () => [new T.Vector3(CX - 26, 30, CZ + 30), new T.Vector3(CX, CY + 8, CZ)],
+  top: () => [new T.Vector3(4.01, 120, 0.01), new T.Vector3(4, 0, 0)]
+};
+document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => { stopSpin(); const [p, t] = VIEWS[b.dataset.view](); flyTo(p, t); }));
+
+/* ---------- panel wiring ---------- */
+const ex = document.getElementById('explode'), exOut = document.getElementById('explodeOut');
+ex.addEventListener('input', () => { state.explode = ex.value / 100; exOut.textContent = ex.value + '%'; applyExplode(); });
+const steer = document.getElementById('steer'), steerOut = document.getElementById('steerOut');
+steer.addEventListener('input', () => { state.steer = +steer.value; steerOut.textContent = (state.steer >= 0 ? '+' : '') + state.steer.toFixed(1) + '°'; updateBeam(); });
+function toggle(id, keyName, fn) {
+  const b = document.getElementById(id);
+  b.addEventListener('click', () => { state[keyName] = !state[keyName]; b.setAttribute('aria-pressed', String(state[keyName])); fn && fn(); });
+}
+toggle('tLabels', 'labels', () => labelObjs.forEach((o) => { o.visible = state.labels; o.element.style.display = state.labels ? '' : 'none'; }));
+toggle('tSignal', 'signal', () => { sigGroup.visible = state.signal; pulses.forEach((p) => p.visible = state.signal); });
+toggle('tSpin', 'spin', () => { controls.autoRotate = state.spin; });
+function stopSpin() { if (state.spin) { state.spin = false; controls.autoRotate = false; document.getElementById('tSpin').setAttribute('aria-pressed', 'false'); } }
+controls.autoRotateSpeed = 0.8;
+
+const compsEl = document.getElementById('comps');
+ORDER.forEach((id) => {
+  const c = COMPONENTS[id];
+  const li = document.createElement('li'); li.className = 'comp'; li.dataset.id = id; li.tabIndex = 0;
+  li.innerHTML = '<span></span><small></small>'; li.firstChild.textContent = c.name; li.lastChild.textContent = c.count;
+  li.addEventListener('click', () => select(id, true));
+  li.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); select(id, true); } });
+  compsEl.appendChild(li);
+});
+
+// genetic algorithm illustration
+const genEl = document.getElementById('gen'), fitEl = document.getElementById('fit');
+const spark = document.getElementById('spark'), sg = spark.getContext('2d');
+function drawSpark() {
+  const w = spark.width, h = spark.height; sg.clearRect(0, 0, w, h);
+  sg.strokeStyle = 'rgba(142,156,152,0.25)'; sg.lineWidth = 1;
+  [1.0, 1.2, 1.4].forEach((v) => { const y = h - 3 - (v - 1.0) / 0.45 * (h - 6); sg.beginPath(); sg.moveTo(0, y); sg.lineTo(w, y); sg.stroke(); });
+  const hs = state.history; if (hs.length < 2) return;
+  sg.beginPath();
+  hs.forEach((v, i) => { const x = i / 60 * (w - 4) + 2, y = h - 3 - (v - 1.0) / 0.45 * (h - 6); i ? sg.lineTo(x, y) : sg.moveTo(x, y); });
+  sg.strokeStyle = '#ff4f8b'; sg.lineWidth = 1.6; sg.stroke();
+  const lx = (hs.length - 1) / 60 * (w - 4) + 2, ly = h - 3 - (hs[hs.length - 1] - 1.0) / 0.45 * (h - 6);
+  sg.fillStyle = '#ffd2e3'; sg.beginPath(); sg.arc(lx, ly, 2.4, 0, 7); sg.fill();
+}
+function setGA(gen, fit) { state.gen = gen; state.fit = fit; genEl.textContent = gen; fitEl.textContent = fit.toFixed(2); }
+document.getElementById('runGA').addEventListener('click', () => {
+  state.history = [1.0]; setGA(0, 1.0); state.focus = 0.3;
+  state.ga = { s: performance.now(), last: 0, best: 1.0 };
+});
+document.getElementById('resetGA').addEventListener('click', () => { state.ga = null; state.history = [1.0]; setGA(0, 1.0); state.focus = 0.3; updateBeam(); drawSpark(); });
+function stepGA(now) {
+  const g = state.ga; if (!g) return;
+  const gen = Math.min(60, Math.floor((now - g.s) / 110));
+  if (gen === g.last) return;
+  for (let k = g.last + 1; k <= gen; k++) {
+    const target = 1.0 + 0.42 * (1 - Math.exp(-k / 14));
+    g.best = Math.max(g.best, target - Math.random() * 0.03);
+    state.history.push(g.best);
+  }
+  g.last = gen;
+  setGA(gen, g.best);
+  state.focus = T.MathUtils.clamp(0.3 + 0.7 * (g.best - 1.0) / 0.4, 0.3, 1);
+  updateBeam(); drawSpark();
+  if (gen >= 60) state.ga = null;
+}
+
+/* ---------- resize & loop ---------- */
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight); labelRenderer.setSize(window.innerWidth, window.innerHeight);
+});
+let t0 = performance.now();
+function loop(now) {
+  requestAnimationFrame(loop);
+  if (fly) {
+    const t = Math.min(1, (now - fly.s) / fly.d), k = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    camera.position.lerpVectors(fly.p0, fly.p1, k); controls.target.lerpVectors(fly.t0, fly.t1, k);
+    if (t >= 1) fly = null;
+  }
+  controls.update();
+  stepGA(now);
+  if (state.signal && sigCurve) {
+    const speed = reduceMotion ? 0 : 0.045;
+    const base = ((now - t0) / 1000) * speed;
+    pulses.forEach((p, i) => { const u = (base + i / pulses.length) % 1; p.position.copy(sigCurve.getPointAt(u)); p.visible = true; });
+  }
+  const flick = reduceMotion ? 1 : 0.9 + 0.1 * Math.sin(now / 120);
+  glow.material.opacity = (0.5 + 0.5 * state.focus) * flick;
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+
+applyExplode(); drawSpark(); setGA(0, 1.0);
+document.getElementById('loading').remove();
+requestAnimationFrame(loop);
+}
+// wait for the web fonts so text painted onto the boards uses the right faces
+(function () {
+  let done = false; const go = () => { if (!done) { done = true; main(); } };
+  if (document.fonts && document.fonts.load) {
+    Promise.all(['500 20px "IBM Plex Sans"', '600 20px "IBM Plex Sans"', '700 20px "IBM Plex Sans"', '500 20px "IBM Plex Mono"'].map((f) => document.fonts.load(f))).then(go, go);
+    setTimeout(go, 2500);
+  } else go();
+})();
+</script>
+</body>
+</html>

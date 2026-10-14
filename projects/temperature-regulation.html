@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PID Temperature Regulation · Jordan Vick</title>
+<meta name="description" content="An Arduino PID controller that reads thermistors and drives PWM fans to regulate an EV battery enclosure, with a live PID simulator.">
+<meta property="og:title" content="PID Battery Temperature Regulation · Jordan Vick">
+<meta property="og:description" content="Arduino PID control of PWM fans from thermistor feedback for an electric Jeep conversion. Try the live PID simulator.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://jordankylevick-sudo.github.io/Portfolio_JV/projects/temperature-regulation.html">
+<meta property="og:image" content="https://jordankylevick-sudo.github.io/Portfolio_JV/assets/img/pid-card.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Saira+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="../assets/style.css">
+<style>
+  .sim { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; align-items: start; }
+  .sim canvas { width: 100%; height: 360px; display: block; }
+  .ctrls { display: grid; gap: 14px; }
+  .sl { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: center; font-size: 14px; }
+  .sl output { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .sl input { grid-column: 1 / -1; width: 100%; accent-color: var(--beam); }
+  .sl small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; }
+  .presets button, .simbtn { font: 500 13px var(--font-body); color: var(--ink); background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 7px 11px; cursor: pointer; }
+  .presets button:hover, .simbtn:hover { border-color: #44535d; }
+  .presets button[aria-pressed="true"] { border-color: var(--beam); background: rgba(255,79,139,.12); color: #fff; }
+  .readouts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-top: 14px; }
+  .readouts div { background: var(--bg-2); padding: 10px 12px; }
+  .readouts b { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .readouts span { font-size: 12px; color: var(--muted); }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .legend i { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 6px; }
+  .eq { font-family: var(--font-mono); font-size: 15px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; overflow-x: auto; color: #fff; white-space: nowrap; }
+  .terms { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 22px; }
+  .terms .panel h3 { color: var(--beam); font-size: 22px; }
+  .terms .panel p { font-size: 15px; color: var(--ink-2); margin: 0; }
+  @media (max-width: 900px) { .sim { grid-template-columns: 1fr; } .terms { grid-template-columns: 1fr; } .readouts { grid-template-columns: repeat(2, 1fr); } .sim canvas { height: 300px; } }
+</style>
+</head>
+<body>
+<nav class="nav" aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="../">Jordan Vick<span>.</span></a>
+    <ul>
+      <li><a class="l" href="../#projects">Projects</a></li>
+      <li><a class="l" href="#simulator">Simulator</a></li>
+      <li><a class="l" href="../#contact">Contact</a></li>
+    </ul>
+  </div>
+</nav>
+
+<main>
+<header class="p-head">
+  <div class="wrap">
+    <a class="back" href="../#projects">← All projects</a>
+    <p class="eyebrow">Queen's Relectric · APSC 103 design project · Jan – Apr 2023</p>
+    <h1>PID Battery Temperature Regulation</h1>
+    <p class="lead">A closed-loop cooling controller for the battery enclosure of a 1997 Jeep TJ being converted to fully electric. Thermistors measure battery temperature and an Arduino PID loop sets the speed of five PWM fans, so the system cools only as hard as it needs to.</p>
+    <div class="facts">
+      <div class="fact"><b>3×</b><span>faster cooling than passive (19 vs 60 min)</span></div>
+      <div class="fact"><b>±5 °C</b><span>held around setpoint under a live heat load</span></div>
+      <div class="fact"><b>5 · 10</b><span>PWM fans · thermistors</span></div>
+      <div class="fact"><b>$97.50</b><span>prototype cost on a $100 budget</span></div>
+    </div>
+    <div class="meta-row"><span><b>Role</b> control software and sensing</span><span><b>Hardware</b> Arduino Uno, NTC thermistors, 1800 RPM PWM fans</span><span><b>Language</b> Arduino C++</span></div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">The brief</p>
+      <h2>Keep the pack cool without wasting power</h2>
+      <p>Queen's Relectric needed a battery enclosure that actively regulates battery temperature and protects the cells. My team built a scaled-down, four-battery plywood prototype with four intake fans, one exhaust fan and two thermistors per battery.</p>
+      <p>I owned the software side: reading the sensors, converting them to temperature, and closing the loop with a PID controller that adjusts fan speed automatically instead of running the fans flat out all the time.</p>
+    </div>
+    <div class="panel">
+      <p class="eyebrow" style="margin-bottom:10px">Sizing the cooling</p>
+      <h3>Worst-case heat vs fan capacity</h3>
+      <p style="color:var(--ink-2);font-size:15.5px">Battery heat comes mostly from resistive loss in the cells, so we sized the fans against the worst-case current draw.</p>
+      <div class="eq">P = I²R = (180 A)² × 16 × 0.7 mΩ ≈ 363 W</div>
+      <div class="table-scroll" style="margin-top:14px">
+        <table class="compare">
+          <tbody>
+            <tr><td>Worst-case heat generated</td><td>363 W</td></tr>
+            <tr><td>Modelled fan cooling capacity</td><td class="hi">455 W</td></tr>
+            <tr><td>Margin</td><td class="hi">+25%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <p class="eyebrow">How it works</p>
+    <h2>The control loop</h2>
+    <div class="diagram panel" role="img" aria-label="Control loop: NTC thermistor in a voltage divider feeds the Arduino's 10-bit ADC, which converts the reading to temperature. The PID controller compares it to the setpoint and outputs a 0 to 255 PWM command to five fans, which cool the enclosure, closing the loop.">
+      <svg viewBox="0 0 1040 250" xmlns="http://www.w3.org/2000/svg" font-family="IBM Plex Sans, sans-serif">
+        <defs><marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ff4f8b"/></marker></defs>
+        <g fill="#161d21" stroke="#33414a" stroke-width="1.5">
+          <rect x="10" y="40" width="170" height="92" rx="10"/>
+          <rect x="225" y="40" width="170" height="92" rx="10"/>
+          <rect x="440" y="40" width="190" height="92" rx="10" stroke="#ff4f8b"/>
+          <rect x="675" y="40" width="160" height="92" rx="10"/>
+          <rect x="880" y="40" width="150" height="92" rx="10" stroke="#d9a35b"/>
+        </g>
+        <g fill="#e5ebe8" font-size="17" font-weight="600" text-anchor="middle">
+          <text x="95" y="78">Thermistors</text><text x="310" y="78">Arduino ADC</text><text x="535" y="78">PID controller</text><text x="755" y="78">PWM output</text><text x="955" y="78">5 fans</text>
+        </g>
+        <g fill="#8a9894" font-size="13" text-anchor="middle" font-family="IBM Plex Mono, monospace">
+          <text x="95" y="102">NTC in voltage</text><text x="95" y="119">divider</text>
+          <text x="310" y="102">10-bit, 0–1023</text><text x="310" y="119">converted to °C</text>
+          <text x="535" y="102">error = T − setpoint</text><text x="535" y="119">reverse acting</text>
+          <text x="755" y="102">analogWrite()</text><text x="755" y="119">0–255</text>
+          <text x="955" y="102">4 intake</text><text x="955" y="119">1 exhaust</text>
+        </g>
+        <g stroke="#ff4f8b" stroke-width="2" fill="none" marker-end="url(#ar2)">
+          <path d="M180 86H221"/><path d="M395 86H436"/><path d="M630 86H671"/><path d="M835 86H876"/>
+          <path d="M955 132V200H95V136"/>
+        </g>
+        <text x="525" y="222" fill="#b9c4c0" font-size="13" text-anchor="middle" font-family="IBM Plex Mono, monospace">airflow cools the cells → new temperature reading</text>
+      </svg>
+    </div>
+    <div class="eq" style="margin-top:22px">fan = Kp·e + Ki·Σe·dt + Kd·de/dt,&nbsp;&nbsp; e = T<sub>measured</sub> − T<sub>setpoint</sub>,&nbsp;&nbsp; clamped to 0–100 %</div>
+    <div class="terms">
+      <div class="panel"><h3>P · present</h3><p>The hotter the pack is above setpoint, the faster the fans spin. On its own it settles slightly above setpoint, because it needs some error to keep the fans running.</p></div>
+      <div class="panel"><h3>I · past</h3><p>Accumulates lingering error and keeps pushing fan speed up until that offset is gone. Clamped when the fans are maxed out to prevent integral windup.</p></div>
+      <div class="panel"><h3>D · future</h3><p>Reacts to how fast temperature is changing, ramping the fans early on a fast rise. Kept small, since thermistor noise looks like rapid change.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="simulator">
+  <div class="wrap">
+    <p class="eyebrow">Try it</p>
+    <h2>PID simulator</h2>
+    <p>The enclosure starts hot, and the controller pulls it down to the setpoint and holds it there. Change the gains, setpoint or heat load, or add a heat spike, and see how each term changes the response. The thermal model includes sensor lag and fans that stall below about 12% PWM, like the real prototype.</p>
+    <div class="sim panel" style="margin-top:20px">
+      <div>
+        <canvas id="pidPlot" aria-label="Simulated enclosure temperature and fan speed over 40 minutes"></canvas>
+        <div class="legend"><span><i style="background:#ff4f8b"></i>enclosure temperature</span><span><i style="background:#2bb071"></i>setpoint</span><span><i style="background:#d9a35b"></i>fan speed</span></div>
+        <div class="readouts">
+          <div><b id="rTemp">–</b><span>temperature now</span></div>
+          <div><b id="rFan">–</b><span>fan speed now</span></div>
+          <div><b id="rTime">–</b><span>time to reach ±2 °C</span></div>
+          <div><b id="rBand">–</b><span>max deviation after</span></div>
+        </div>
+      </div>
+      <div class="ctrls">
+        <div class="presets" role="group" aria-label="Gain presets">
+          <button data-preset="trial" aria-pressed="false">Trial-and-error</button>
+          <button data-preset="tuned" aria-pressed="true">Tuned PID</button>
+          <button data-preset="ponly" aria-pressed="false">P only</button>
+        </div>
+        <div class="sl"><label for="kp">Kp · proportional</label><output id="kpOut"></output><input id="kp" type="range" min="0" max="200" step="1" value="25"><small>% fan per °C of error</small></div>
+        <div class="sl"><label for="ki">Ki · integral</label><output id="kiOut"></output><input id="ki" type="range" min="0" max="5" step="0.05" value="0.2"><small>% fan per °C·s of accumulated error</small></div>
+        <div class="sl"><label for="kd">Kd · derivative</label><output id="kdOut"></output><input id="kd" type="range" min="0" max="1000" step="10" value="100"><small>% fan per °C/s of change</small></div>
+        <div class="sl"><label for="sp">Setpoint</label><output id="spOut"></output><input id="sp" type="range" min="28" max="45" step="1" value="35"></div>
+        <div class="sl"><label for="heat">Heat load</label><output id="heatOut"></output><input id="heat" type="range" min="20" max="110" step="5" value="60"></div>
+        <div class="presets"><button class="simbtn" id="pidRun" style="border-color:var(--beam);color:#fff">Run</button><button class="simbtn" id="pidSpike">Add heat spike</button></div>
+      </div>
+    </div>
+    <p class="muted" style="font-size:14px;margin-top:12px">Simulated, scaled-down thermal model for illustration. It is not measured data from the prototype.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap split">
+    <div>
+      <p class="eyebrow">Results</p>
+      <h2>Testing the prototype</h2>
+      <ul class="bullets">
+        <li>A 75 °C heat source placed in the enclosure cooled to 30 °C in <strong>19 minutes</strong> with the system running, vs <strong>60 minutes</strong> passively: about 3× faster</li>
+        <li>With a powered light bulb as a continuous heat source, the controller held temperature within <strong>±5 °C</strong> of setpoint</li>
+        <li>Delivered the prototype for <strong>$97.50</strong> against a $100 budget</li>
+      </ul>
+    </div>
+    <div>
+      <p class="eyebrow">What I'd do differently</p>
+      <h2>Tuning it properly</h2>
+      <p>We tuned the gains by hand, logging temperature and fan speed every second and adjusting Kp, Ki and Kd based on the response. It worked, but it wasn't optimal. Today I would:</p>
+      <ol class="steps">
+        <li><p>Run a step test to measure the enclosure's time constant and sensor delay</p></li>
+        <li><p>Use Ziegler–Nichols to get starting gains, then fine-tune for overshoot, settling time and steady-state error</p></li>
+        <li><p>Likely drop to PI with anti-windup, since thermal systems are slow and D amplifies sensor noise</p></li>
+        <li><p>Test with a dynamic heat load, since a single hot source mostly measures raw cooling power</p></li>
+      </ol>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <a href="../">← Back to portfolio</a>
+    <span>© 2026 Jordan Vick</span>
+  </div>
+</footer>
+<script src="../assets/pid.js"></script>
+</body>
+</html>
